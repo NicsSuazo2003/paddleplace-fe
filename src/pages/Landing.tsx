@@ -254,10 +254,14 @@ export function Landing() {
             alt="Paddle Place Court"
             className="h-full w-full object-cover object-[75%_center] md:object-right"
           />
-          {/* Subtle gradient: Softly darkens the left side for crisp text readability while leaving the illuminated court vivid */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#061A1C]/90 via-[#092629]/65 to-transparent" />
-          {/* Top/bottom smooth blend into navigation bar and booking section */}
-          <div className="absolute inset-0 bg-gradient-to-b from-[#092629]/70 via-transparent to-[#F8FAF9]" />
+          {/* 1. Left-to-right shade: keeps text high-contrast and readable */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#061A1C]/95 via-[#071F22]/75 to-transparent" />
+          
+          {/* 2. Top-to-bottom shade: darkens navbar area without washing out the photo bottom */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#061A1C]/80 via-transparent to-black/60" />
+          
+          {/* 3. Subtle bottom seam: tight 80px dark-to-light blend only at the boundary */}
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#F8FAF9] to-transparent opacity-30" />
         </div>
 
         <div className="container-page relative z-10 py-8 sm:py-20">
