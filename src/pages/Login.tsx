@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
-import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/stores/authStore';
@@ -19,7 +18,7 @@ export function Login() {
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/admin';
 
   useEffect(() => {
-    // wait for init() to resolve before deciding whether to redirect
+    // Wait for init() to resolve before deciding whether to redirect
     if (!initializing && isAuthenticated) {
       navigate(from, { replace: true });
     }
@@ -40,27 +39,24 @@ export function Login() {
     }
   };
 
-  const fillDemo = () => {
-    setEmail(ADMIN_CREDENTIALS.email);
-    setPassword(ADMIN_CREDENTIALS.password);
-  };
-
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-charcoal">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0A2629]">
+      {/* Background Image & Tone Overlays */}
       <div className="absolute inset-0">
         <img
           src={COURT_IMAGES.hero}
           alt=""
-          className="h-full w-full object-cover opacity-20"
+          className="h-full w-full object-cover opacity-25"
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-forest-950 via-forest-950/90 to-charcoal" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#061A1C]/95 via-[#0A2629]/90 to-[#115259]/60" />
         <div className="absolute inset-0 bg-grid opacity-20" />
       </div>
 
       <div className="relative z-10 w-full max-w-md px-4">
+        {/* Back Link */}
         <Link
           to="/"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-cream-muted hover:text-gold-300 transition"
+          className="mb-6 inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/70 hover:text-[#B6DAC8] transition"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home
@@ -69,23 +65,32 @@ export function Login() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="card p-8"
+          className="rounded-3xl border border-[#688D87]/25 bg-white/95 p-7 shadow-2xl backdrop-blur-md sm:p-9"
         >
-          <div className="mb-6 text-center">
-            {/* Just the image logo, bigger, no text */}
-            <div className="flex justify-center">
-              <Logo size="2xl" to="" withText={false} />
+          {/* Brand Header */}
+          <div className="mb-7 text-center">
+            <Link to="/" aria-label="Paddle Place Home" className="inline-flex flex-col items-center leading-none transition hover:opacity-90">
+              <span className="font-display text-3xl font-black tracking-tight text-[#115259]">
+                Paddle <span className="text-[#48736B]">Place</span>
+              </span>
+              <span className="font-sans text-[9px] font-extrabold uppercase tracking-[0.22em] text-[#526E69] mt-1.5">
+                Pickleball &amp; Table Tennis
+              </span>
+            </Link>
+
+            <div className="mt-5 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#115259]">
+              <Shield className="h-3.5 w-3.5 text-[#115259]" />
+              Admin Portal
             </div>
-            <h1 className="mt-3 font-display text-lg font-bold text-cream">Admin Portal</h1>
-            <p className="mt-1 text-xs text-cream-muted">Sign in to manage bookings</p>
+            <p className="mt-1 text-xs text-[#526E69]">Sign in to manage bookings &amp; courts</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Email"
               type="email"
-              placeholder="admin@picklejoe.com"
-              leftIcon={<Mail className="h-4 w-4" />}
+              placeholder="admin@paddleplace.com"
+              leftIcon={<Mail className="h-4 w-4 text-[#526E69]" />}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
@@ -94,16 +99,16 @@ export function Login() {
               label="Password"
               type="password"
               placeholder="••••••••"
-              leftIcon={<Lock className="h-4 w-4" />}
+              leftIcon={<Lock className="h-4 w-4 text-[#526E69]" />}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
 
             {(formError || error) && (
-              <div className="flex items-center gap-2 rounded-lg bg-error/10 p-3 text-sm text-error">
+              <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 p-3 text-xs sm:text-sm text-red-600">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {formError ?? error}
+                <span>{formError ?? error}</span>
               </div>
             )}
 
@@ -112,12 +117,12 @@ export function Login() {
               size="lg"
               fullWidth
               isLoading={loading}
+              className="mt-2 bg-[#115259] text-white font-bold hover:bg-[#0E4348] shadow-md transition-all"
               leftIcon={<Shield className="h-5 w-5" />}
             >
               Sign In
             </Button>
           </form>
-
         </motion.div>
       </div>
     </div>
