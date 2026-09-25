@@ -1,7 +1,60 @@
-<svg width="200" height="48" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="24" cy="24" r="22" fill="#1A2E1A" stroke="#C9A94E" stroke-width="2"/>
-  <path d="M14 28C14 20 18 14 24 14C30 14 34 20 34 28" stroke="#C9A94E" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M24 14V34" stroke="#C9A94E" stroke-width="2.5" stroke-linecap="round"/>
-  <circle cx="24" cy="20" r="3" fill="#D4AF37"/>
-  <text x="52" y="32" font-family="Oswald, sans-serif" font-size="24" font-weight="700" fill="#F5F0E8">Pickle<tspan fill="#C9A94E">Joe</tspan></text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Rounded Base Tile -->
+  <rect width="512" height="512" rx="128" fill="#115259" />
+
+  <!-- Background Large Paddle Ring -->
+  <path
+    d="M 230 110 
+       C 310 110, 335 130, 335 195 
+       L 335 220 
+       C 335 265, 318 285, 275 285 
+       L 275 315 
+       L 235 315 
+       L 235 285 
+       C 170 285, 145 265, 145 210 
+       L 145 185 
+       C 145 125, 170 110, 230 110 Z"
+    stroke="#B6DAC8"
+    stroke-width="26"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Foreground Small Paddle (White / Mint Face) -->
+  <path
+    d="M 255 240 
+       C 290 240, 305 252, 305 292 
+       L 305 318 
+       C 305 348, 290 362, 268 362 
+       L 268 410 
+       C 268 418, 262 424, 254 424 
+       L 242 424 
+       C 234 424, 228 418, 228 410 
+       L 228 362 
+       C 205 362, 195 348, 195 318 
+       L 195 292 
+       C 195 252, 210 240, 255 240 Z"
+    fill="#F8FAF9"
+    stroke="#115259"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Decorative Ball (Accent Seafoam) -->
+  <circle cx="360" cy="320" r="42" fill="#B6DAC8" />
+  <path
+    d="M 338 300 C 354 308, 354 332, 338 340"
+    fill="none"
+    stroke="#115259"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+  <path
+    d="M 382 300 C 366 308, 366 332, 382 340"
+    fill="none"
+    stroke="#115259"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
 </svg>
