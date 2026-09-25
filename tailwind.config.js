@@ -4,86 +4,122 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ⭐ Exact Court Green Palette (#395838 as core)
+        // Core neutrals
+        charcoal: '#162422', // Fixed: Resolves `bg-charcoal` in index.css
+        pine: '#162422',
+
+        // ⭐ Paddle Place Core Deep Teal
+        'brand-teal': {
+          50: '#F0F6F5',
+          100: '#DCECEC',
+          200: '#B6D3D0',
+          300: '#86B3AD',
+          400: '#48877E',
+          500: '#115259',
+          600: '#0E4348',
+          700: '#0B3438',
+          800: '#092629',
+          900: '#061A1C',
+          950: '#030E0F',
+        },
+
         forest: {
-          950: '#0b130b',
-          900: '#142013',
-          800: '#20311f',
-          700: '#2d442c',
-          600: '#344e33',
-          500: '#395838', // ⭐ Exact green
-          400: '#4e734c',
-          300: '#6d936b',
-          200: '#9db89c',
-          100: '#cfe0ce',
-          50:  '#eef4ee',
+          50: '#F0F6F5',
+          100: '#DCECEC',
+          200: '#B6D3D0',
+          300: '#86B3AD',
+          400: '#48877E',
+          500: '#115259',
+          600: '#0E4348',
+          700: '#0B3438',
+          800: '#092629',
+          900: '#061A1C',
+          950: '#030E0F',
         },
 
-        'brand-green': {
-          50:  '#eef4ee',
-          100: '#cfe0ce',
-          200: '#9db89c',
-          300: '#6d936b',
-          400: '#4e734c',
-          500: '#395838', // ⭐ Exact green
-          600: '#344e33',
-          700: '#2d442c',
-          800: '#20311f',
-          900: '#142013',
-          950: '#0b130b',
+        // ⭐ Court Mint / Seafoam
+        mint: {
+          50: '#F7FCF9',
+          100: '#EEF7F2',
+          200: '#DDEFE6',
+          300: '#C7E4D5',
+          400: '#B6DAC8',
+          500: '#94C6AE',
+          600: '#6FA88E',
+          700: '#4F846C',
+          800: '#35614E',
+          900: '#1F4032',
         },
 
-        // ⭐ Exact Court Blue Palette (#0e4174 as core)
-        'brand-blue': {
-          50:  '#edf5fc',
-          100: '#d7e7f9',
-          200: '#b4d4f4',
-          300: '#83b8eb',
-          400: '#4c95de',
-          500: '#0e4174', // ⭐ Exact blue (#0e4174)
-          600: '#0b3662',
-          700: '#092c50',
-          800: '#07223f',
-          900: '#05182d',
-          950: '#030f1d',
+        // ⭐ Muted Slate Green
+        sage: {
+          50: '#F5F8F7',
+          100: '#E9EFEF',
+          200: '#D3DFDD',
+          300: '#ADC4C0',
+          400: '#86A7A1',
+          500: '#688D87',
+          600: '#52726C',
+          700: '#3F5853',
+          800: '#2F413D',
+          900: '#202C29',
         },
 
-        gold: {
-  50:  '#edf5fc',
-  100: '#d7e7f9',
-  200: '#b4d4f4',
-  300: '#83b8eb',
-  400: '#0e4174', // ⭐ Swapped from #4e6e96 to your exact blue
-  500: '#0b3662',
-  600: '#092c50',
-  700: '#07223f',
-  800: '#05182d',
-  900: '#030f1d',
-},
-        accentGreen: {
-  300: '#527b50', // Lighter tint for hover states
-  400: '#395838', // ⭐ YOUR EXACT COURT GREEN (targeted by text-accentGreen-400)
-  500: '#2a4229', // Darker shade for active/focus states
-},
         cream: {
-          DEFAULT: '#F5F0E8',
-          dark: '#E8E0D2',
-          muted: '#B8B0A0',
+          DEFAULT: '#F8FAF9',
+          50: '#FFFFFF',
+          100: '#F2F6F5',
+          200: '#E6ECE9',
+          muted: '#8CA59F',
         },
-        charcoal: '#1A1A1A',
-        success: '#2ECC71',
-        error: '#E74C3C',
-        warning: '#F39C12',
+
+        // Backward compatibility for existing UI buttons / badges
+        gold: {
+          50: '#F0F6F5',
+          100: '#DCECEC',
+          200: '#B6D3D0',
+          300: '#86B3AD',
+          400: '#115259',
+          500: '#0E4348',
+          600: '#0B3438',
+          700: '#092629',
+          800: '#061A1C',
+          900: '#030E0F',
+        },
+
+        'brand-blue': {
+          50: '#F0F6F5',
+          100: '#DCECEC',
+          200: '#B6D3D0',
+          300: '#B6DAC8',
+          400: '#48877E',
+          500: '#115259',
+          600: '#0E4348',
+          700: '#0B3438',
+          800: '#092629',
+          900: '#061A1C',
+          950: '#030E0F',
+        },
+
+        // Status utility colors
+        success: '#1B9A59',
+        error: '#E04F44',
+        warning: '#E59B23',
       },
+
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Oswald', 'Inter', 'sans-serif'],
+        sans: ['Inter', 'Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Fredoka', 'Montserrat', 'sans-serif'],
+        sub: ['Montserrat', 'Inter', 'sans-serif'],
       },
+
       boxShadow: {
-  'glow-gold': '0 0 0 1px rgba(14,65,116,0.6), 0 8px 30px rgba(14,65,116,0.35)',
-  'card': '0 4px 24px rgba(0,0,0,0.25)',
-  'card-lg': '0 12px 40px rgba(0,0,0,0.35)',
-},
+        'glow-teal': '0 0 0 1px rgba(17,82,89,0.3), 0 8px 24px rgba(17,82,89,0.2)',
+        'glow-mint': '0 0 0 2px rgba(182,218,200,0.5), 0 8px 20px rgba(182,218,200,0.3)',
+        card: '0 2px 12px rgba(17,82,89,0.06)',
+        'card-lg': '0 8px 30px rgba(17,82,89,0.1)',
+      },
+
       keyframes: {
         'fade-in': {
           '0%': { opacity: '0', transform: 'translateY(8px)' },
@@ -94,6 +130,7 @@ export default {
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
+
       animation: {
         'fade-in': 'fade-in 0.4s ease-out',
         'slide-up': 'slide-up 0.5s ease-out',

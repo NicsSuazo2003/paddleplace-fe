@@ -4,17 +4,17 @@
 
 @layer base {
   * {
-    border-color: theme('colors.forest.500');
+    border-color: theme('colors.sage.300');
   }
   html {
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-charcoal text-cream font-sans antialiased;
+    @apply bg-cream text-pine font-sans antialiased;
     font-feature-settings: 'cv11', 'ss01';
   }
   ::selection {
-    @apply bg-gold-400 text-cream;
+    @apply bg-mint-400 text-pine;
   }
 }
 
@@ -23,16 +23,16 @@
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
   .card {
-    @apply rounded-2xl border border-forest-500 bg-forest-700 shadow-card;
+    @apply rounded-2xl border border-sage-200 bg-white shadow-card;
   }
   .input-field {
-    @apply w-full rounded-xl border border-forest-500 bg-forest-800 px-4 py-3 text-cream placeholder-cream-muted transition focus:border-gold-400 focus:outline-none focus:ring-2 focus:ring-gold-400/30;
+    @apply w-full rounded-xl border border-sage-300 bg-white px-4 py-3 text-pine placeholder-sage-400 transition focus:border-brand-teal-500 focus:outline-none focus:ring-2 focus:ring-brand-teal-500/20;
   }
   .badge {
     @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold;
   }
   .section-title {
-    @apply font-display text-3xl font-bold tracking-tight text-cream sm:text-4xl;
+    @apply font-display text-3xl font-extrabold tracking-tight text-pine sm:text-4xl;
   }
 }
 
@@ -48,8 +48,8 @@
     scrollbar-width: none;
   }
   .bg-grid {
-    background-image: linear-gradient(rgba(58,74,58,0.15) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(58,74,58,0.15) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(104, 141, 135, 0.12) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(104, 141, 135, 0.12) 1px, transparent 1px);
     background-size: 48px 48px;
   }
 }
