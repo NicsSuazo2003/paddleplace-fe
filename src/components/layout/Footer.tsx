@@ -114,6 +114,17 @@ export function Footer() {
             &copy; {new Date().getFullYear()} {APP_CONFIG.name}. All rights reserved.
           </p>
           <p>
+            Developed by{' '}
+            <a
+              href="https://astravex-website.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-[#B6DAC8] transition hover:underline"
+            >
+              Astravex Systems
+            </a>
+          </p>
+          <p>
             <span className="font-semibold text-[#B6DAC8]">Est. {APP_CONFIG.established}</span>
           </p>
         </div>
