@@ -5,7 +5,7 @@ import { Mail, Lock, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/stores/authStore';
-import { ADMIN_CREDENTIALS, COURT_IMAGES } from '@/utils/constants';
+import { COURT_IMAGES } from '@/utils/constants';
 
 export function Login() {
   const navigate = useNavigate();
@@ -62,27 +62,28 @@ export function Login() {
           Back to Home
         </Link>
 
+        {/* Dark Glassmorphism Container */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl border border-[#688D87]/25 bg-white/95 p-7 shadow-2xl backdrop-blur-md sm:p-9"
+          className="rounded-3xl border border-white/10 bg-[#0C3236]/80 p-7 shadow-2xl backdrop-blur-xl sm:p-9"
         >
           {/* Brand Header */}
           <div className="mb-7 text-center">
             <Link to="/" aria-label="Paddle Place Home" className="inline-flex flex-col items-center leading-none transition hover:opacity-90">
-              <span className="font-display text-3xl font-black tracking-tight text-[#115259]">
-                Paddle <span className="text-[#48736B]">Place</span>
+              <span className="font-display text-3xl font-black tracking-tight text-white">
+                Paddle <span className="text-[#B6DAC8]">Place</span>
               </span>
-              <span className="font-sans text-[9px] font-extrabold uppercase tracking-[0.22em] text-[#526E69] mt-1.5">
+              <span className="font-sans text-[9px] font-extrabold uppercase tracking-[0.22em] text-[#B6DAC8]/80 mt-1.5">
                 Pickleball &amp; Table Tennis
               </span>
             </Link>
 
-            <div className="mt-5 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#115259]">
-              <Shield className="h-3.5 w-3.5 text-[#115259]" />
+            <div className="mt-5 flex items-center justify-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#B6DAC8]">
+              <Shield className="h-3.5 w-3.5 text-[#B6DAC8]" />
               Admin Portal
             </div>
-            <p className="mt-1 text-xs text-[#526E69]">Sign in to manage bookings &amp; courts</p>
+            <p className="mt-1 text-xs text-white/60">Sign in to manage bookings &amp; courts</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -90,7 +91,7 @@ export function Login() {
               label="Email"
               type="email"
               placeholder="admin@paddleplace.com"
-              leftIcon={<Mail className="h-4 w-4 text-[#526E69]" />}
+              leftIcon={<Mail className="h-4 w-4 text-white/40" />}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
@@ -99,14 +100,14 @@ export function Login() {
               label="Password"
               type="password"
               placeholder="••••••••"
-              leftIcon={<Lock className="h-4 w-4 text-[#526E69]" />}
+              leftIcon={<Lock className="h-4 w-4 text-white/40" />}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
 
             {(formError || error) && (
-              <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 p-3 text-xs sm:text-sm text-red-600">
+              <div className="flex items-center gap-2 rounded-xl bg-red-500/15 border border-red-500/30 p-3 text-xs sm:text-sm text-red-300">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 <span>{formError ?? error}</span>
               </div>
@@ -117,7 +118,7 @@ export function Login() {
               size="lg"
               fullWidth
               isLoading={loading}
-              className="mt-2 bg-[#115259] text-white font-bold hover:bg-[#0E4348] shadow-md transition-all"
+              className="mt-2 bg-[#B6DAC8] text-[#0C3236] font-bold hover:bg-white shadow-lg transition-all"
               leftIcon={<Shield className="h-5 w-5" />}
             >
               Sign In
