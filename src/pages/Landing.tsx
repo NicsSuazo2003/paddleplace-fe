@@ -33,7 +33,6 @@ import {
 } from '@/utils/format';
 import type { TimeSlot, Court, OpenPlaySession } from '@/types';
 
-// Distinct court accents aligned to the brand's Teal & Sage palette
 const COURT_ACCENTS = [
   { header: 'text-[#115259]', dot: 'bg-[#115259]', border: 'border-[#115259]/30', bg: 'bg-[#F0F6F5]', text: 'text-[#115259]', hoverBorder: 'hover:border-[#115259]', hoverBg: 'hover:bg-[#E2EEEB]' },
   { header: 'text-[#48736B]', dot: 'bg-[#48736B]', border: 'border-[#688D87]/35', bg: 'bg-[#F2F7F5]', text: 'text-[#2D534B]', hoverBorder: 'hover:border-[#48736B]', hoverBg: 'hover:bg-[#E4EFEA]' },
@@ -241,6 +240,8 @@ export function Landing() {
     );
   };
 
+  const isSingleCourt = courts.length === 1;
+
   return (
     <div className="min-h-screen bg-[#F8FAF9] text-[#162422]">
       <Navbar />
@@ -253,7 +254,6 @@ export function Landing() {
             alt="Paddle court"
             className="h-full w-full object-cover"
           />
-          {/* Subtle teal overlay blending the branding to the court */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#0C3236]/95 via-[#0E4348]/85 to-[#115259]/50" />
         </div>
 
@@ -329,7 +329,7 @@ export function Landing() {
             <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-white/70 sm:mt-10 sm:gap-6 sm:text-sm">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[#B6DAC8]" />
-                <span>Purok Mangga 2 Soong , Tago Surigao Del Sur</span>
+                <span>Purok Mangga 2 Soong, Tago, Surigao Del Sur</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4 text-[#B6DAC8]" />
@@ -340,7 +340,7 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Open Play This Week Section */}
+      {/* Open Play Section */}
       {weekSessions.length > 0 && (
         <section className="relative border-b border-[#688D87]/20 bg-white py-10 sm:py-14">
           <div className="container-page">
@@ -476,7 +476,7 @@ export function Landing() {
                       Book a Court
                     </h2>
                     <p className="text-xs text-[#526E69] sm:text-sm">
-                      Pick a date, then tap any number of available time slots
+                      Pick a date, then tap any available time slots
                     </p>
                   </div>
                   <div className="hidden rounded-xl border border-[#688D87]/20 bg-[#F0F6F5] p-2.5 text-[#115259] sm:block md:p-3">
@@ -580,7 +580,9 @@ export function Landing() {
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#115259] text-xs font-bold text-white shadow-sm">
                         2
                       </div>
-                      <h3 className="font-display text-sm font-bold text-[#162422] sm:text-base">Choose Court & Time</h3>
+                      <h3 className="font-display text-sm font-bold text-[#162422] sm:text-base">
+                        {isSingleCourt ? 'Select Time Slots' : 'Choose Court & Time'}
+                      </h3>
                     </div>
 
                     <span className="rounded-full border border-[#115259]/20 bg-[#F0F6F5] px-3 py-1 text-xs font-semibold text-[#115259]">
@@ -624,15 +626,26 @@ export function Landing() {
                       No courts found.
                     </div>
                   ) : (
+                    /* Adaptive wrapper: centered card for 1 court, scrollable grid for multiple */
                     <div className="block">
                       <div className="max-h-[75vh] overflow-y-auto overflow-x-auto rounded-2xl border border-[#688D87]/20 bg-[#F8FAF9]/80">
-                        <div className="w-full p-4 sm:min-w-[580px]">
-                          {/* Sticky Court Column Headers */}
+                        <div
+                          className={`w-full p-4 ${
+                            isSingleCourt
+                              ? 'max-w-md mx-auto'
+                              : courts.length > 3
+                                ? 'min-w-[620px]'
+                                : ''
+                          }`}
+                        >
+                          {/* Sticky Court Column Header */}
                           <div
                             className="sticky -top-4 z-30 -mx-4 -mt-4 mb-4 border-b border-[#688D87]/20 bg-white px-4 py-3 text-center text-xs font-extrabold uppercase tracking-wider text-[#115259] shadow-sm backdrop-blur-md"
                             style={{
                               display: 'grid',
-                              gridTemplateColumns: `repeat(${courts.length}, minmax(56px, 1fr))`,
+                              gridTemplateColumns: isSingleCourt
+                                ? '1fr'
+                                : `repeat(${courts.length}, minmax(110px, 1fr))`,
                               gap: '0.75rem',
                             }}
                           >
@@ -657,6 +670,7 @@ export function Landing() {
                                 title="MORNING"
                                 icon={<CloudSun className="h-4 w-4 text-[#115259]" />}
                                 courts={courts}
+                                isSingleCourt={isSingleCourt}
                                 timeIntervals={morningTimes}
                                 getSlotForCourtAndTime={getSlotForCourtAndTime}
                                 selectedSlotIds={selectedSlotIds}
@@ -670,6 +684,7 @@ export function Landing() {
                                 title="AFTERNOON"
                                 icon={<Sun className="h-4 w-4 text-[#115259]" />}
                                 courts={courts}
+                                isSingleCourt={isSingleCourt}
                                 timeIntervals={afternoonTimes}
                                 getSlotForCourtAndTime={getSlotForCourtAndTime}
                                 selectedSlotIds={selectedSlotIds}
@@ -683,6 +698,7 @@ export function Landing() {
                                 title="EVENING"
                                 icon={<Moon className="h-4 w-4 text-[#115259]" />}
                                 courts={courts}
+                                isSingleCourt={isSingleCourt}
                                 timeIntervals={eveningTimes}
                                 getSlotForCourtAndTime={getSlotForCourtAndTime}
                                 selectedSlotIds={selectedSlotIds}
@@ -769,7 +785,7 @@ export function Landing() {
               {
                 icon: CalendarPlus,
                 title: 'Instant Booking',
-                desc: 'Select your court, date, and time slots in under a minute. No phone calls, no waiting.',
+                desc: 'Select your preferred time slots in under a minute. No phone calls, no waiting.',
               },
               {
                 icon: Wallet,
@@ -819,8 +835,8 @@ export function Landing() {
 
           <div className="grid gap-6 sm:gap-8 md:grid-cols-4">
             {[
-              { step: '01', title: 'Select Court & Time', desc: 'Pick your preferred court, date, and available time slots.' },
-              { step: '02', title: 'Enter Details', desc: 'Fill in your name, contact info, and player count.' },
+              { step: '01', title: 'Select Date & Time', desc: 'Pick your preferred date and choose available time slots.' },
+              { step: '02', title: 'Enter Details', desc: 'Fill in your name, contact info, and player details.' },
               { step: '03', title: 'Pay via GCash', desc: 'Send payment to our GCash number and upload your receipt screenshot.' },
               { step: '04', title: 'Get Confirmed', desc: 'We verify your booking and keep your court ready for play.' },
             ].map((item, i) => (
@@ -862,6 +878,7 @@ function DesktopPeriodSection({
   title,
   icon,
   courts,
+  isSingleCourt,
   timeIntervals,
   getSlotForCourtAndTime,
   selectedSlotIds,
@@ -872,6 +889,7 @@ function DesktopPeriodSection({
   title: string;
   icon: React.ReactNode;
   courts: Court[];
+  isSingleCourt: boolean;
   timeIntervals: { start_time: string; end_time: string }[];
   getSlotForCourtAndTime: (courtId: string, startTime: string, endTime: string) => TimeSlot | undefined;
   selectedSlotIds: string[];
@@ -895,7 +913,9 @@ function DesktopPeriodSection({
             key={`${interval.start_time}-${interval.end_time}`}
             className="grid gap-2.5"
             style={{
-              gridTemplateColumns: `repeat(${courts.length}, minmax(80px, 1fr))`,
+              gridTemplateColumns: isSingleCourt
+                ? '1fr'
+                : `repeat(${courts.length}, minmax(110px, 1fr))`,
             }}
           >
             {courts.map((court, idx) => {
