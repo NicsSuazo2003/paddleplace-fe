@@ -250,11 +250,14 @@ export function Landing() {
       <section className="relative flex min-h-[85vh] items-start pt-28 sm:min-h-screen sm:items-center sm:pt-20 overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src={COURT_IMAGES.hero}
-            alt="Paddle court"
-            className="h-full w-full object-cover"
+            src="/images/paddle-place-hero.jpg"
+            alt="Paddle Place Court"
+            className="h-full w-full object-cover object-[75%_center] md:object-right"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0C3236]/95 via-[#0E4348]/85 to-[#115259]/50" />
+          {/* Subtle gradient: Softly darkens the left side for crisp text readability while leaving the illuminated court vivid */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#061A1C]/90 via-[#092629]/65 to-transparent" />
+          {/* Top/bottom smooth blend into navigation bar and booking section */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#092629]/70 via-transparent to-[#F8FAF9]" />
         </div>
 
         <div className="container-page relative z-10 py-8 sm:py-20">
@@ -270,7 +273,7 @@ export function Landing() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.5 }}
                 onClick={() => navigate('/open-play')}
-                className="mb-4 flex w-full items-center gap-2 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/40 px-3 py-1.5 backdrop-blur-md transition hover:bg-[#115259]/60 sm:mb-5 sm:w-auto sm:px-4"
+                className="mb-4 flex w-full items-center gap-2 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/50 px-3 py-1.5 backdrop-blur-md transition hover:bg-[#115259]/70 sm:mb-5 sm:w-auto sm:px-4"
               >
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#B6DAC8] opacity-75"></span>
@@ -294,11 +297,11 @@ export function Landing() {
               Pickleball & Table Tennis
             </span>
 
-            <h1 className="mt-1 font-display text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl">
+            <h1 className="mt-1 font-display text-4xl font-extrabold tracking-tight text-white sm:text-6xl lg:text-7xl drop-shadow-sm">
               Paddle Place
             </h1>
 
-            <p className="mt-3 text-lg font-medium text-white/85 sm:mt-4 sm:text-2xl">
+            <p className="mt-3 text-lg font-medium text-white/85 sm:mt-4 sm:text-2xl drop-shadow-sm">
               {APP_CONFIG.tagline}
             </p>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/75 sm:mt-5 sm:text-base">
@@ -319,7 +322,7 @@ export function Landing() {
                 size="lg"
                 variant="secondary"
                 to="/track"
-                className="border-white/30 text-white hover:bg-white/10"
+                className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm"
                 leftIcon={<CalendarDays className="h-5 w-5" />}
               >
                 Track My Booking

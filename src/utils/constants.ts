@@ -88,10 +88,11 @@ export const BOOKING_STATUS_META: Record<
 };
 
 export const COURT_IMAGES = {
+  
   court1: 'https://images.pexels.com/photos/17299530/pexels-photo-17299530.jpeg?auto=compress&cs=tinysrgb&w=1200',
   court2: 'https://images.pexels.com/photos/32975182/pexels-photo-32975182.jpeg?auto=compress&cs=tinysrgb&w=1200',
   court3: 'https://images.pexels.com/photos/27151849/pexels-photo-27151849.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  hero: 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?auto=format&fit=crop&w=1920&q=80',
+  hero: '/images/paddle-place-hero.jpg',
   gallery1: 'https://images.pexels.com/photos/17299531/pexels-photo-17299531.jpeg?auto=compress&cs=tinysrgb&w=800',
   gallery2: 'https://images.pexels.com/photos/17299528/pexels-photo-17299528.jpeg?auto=compress&cs=tinysrgb&w=800',
   gallery3: 'https://images.pexels.com/photos/19642670/pexels-photo-19642670.jpeg?auto=compress&cs=tinysrgb&w=800',
