@@ -250,7 +250,7 @@ export function Landing() {
       <section className="relative flex min-h-[85vh] items-start pt-28 sm:min-h-screen sm:items-center sm:pt-20 overflow-hidden">
         <div className="absolute inset-0">
           <img
-            src="/images/paddle-place-hero.jpg"
+            src="/images/paddle-hero.jpg"
             alt="Paddle Place Court"
             className="h-full w-full object-cover object-[75%_center] md:object-right"
           />
