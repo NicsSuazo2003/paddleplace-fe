@@ -31,8 +31,19 @@ export function AdminSidebar() {
 
   return (
     <div className="flex h-full flex-col bg-forest-900 text-cream">
+      {/* Text-only wordmark — no image */}
       <div className="border-b border-forest-700/80 px-6 py-5">
-        <Logo size="sm" to="/admin" />
+        <Link to="/admin" className="block transition hover:opacity-90">
+          <div className="flex flex-col leading-none">
+            <span className="font-display text-xl font-black tracking-tight">
+              <span className="text-white">Paddle </span>
+              <span className="text-[#B6DAC8]">Place</span>
+            </span>
+            <span className="mt-1 font-sans text-[9px] font-extrabold uppercase tracking-[0.2em] text-[#B6DAC8]/80">
+              Pickleball & Table Tennis
+            </span>
+          </div>
+        </Link>
       </div>
 
       <nav className="flex-1 space-y-1.5 px-3 py-4">
@@ -133,7 +144,7 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       <div className="lg:pl-64">
-        {/* Mobile top bar */}
+        {/* Mobile top bar — image Logo stays here since there's no sidebar on mobile */}
         <div className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-forest-700/80 bg-forest-900/95 px-4 backdrop-blur-md lg:hidden">
           <Logo size="sm" to="/admin" />
           <button

@@ -1,10 +1,10 @@
 export const APP_CONFIG = {
-  name: import.meta.env.VITE_APP_NAME ?? 'Center Court',
-  demoMode: (import.meta.env.VITE_DEMO_MODE ?? 'false') === 'true', // ✅ Default to false
+  name: import.meta.env.VITE_APP_NAME ?? 'Paddle Place',        // ✅ Fixed: fallback changed from 'Center Court'
+  demoMode: (import.meta.env.VITE_DEMO_MODE ?? 'false') === 'true',
   apiUrl: import.meta.env.VITE_API_BASE_URL ?? 'https://pickleballbookingclientb.onrender.com',
   tagline: 'Rally. Reserve. Repeat.',
   established: '2026',
-  gcashNumber: '09XX XXX XXXX',
+  gcashNumber: '09XX XXX XXXX',                                  // ⚠️ Still a placeholder — update if you know your real number
   gcashAccountName: 'Paddle Place',
   developer: 'Astravex Systems',
   paymentTimerSeconds: 15 * 60,
@@ -18,9 +18,9 @@ export const FIXED_SLOT = {
   hours: 2,
 };
 
-// ✅ Remove hardcoded admin credentials - use backend
+// ✅ Fixed: email now matches the DB user (admin@paddleplace.ph)
 export const ADMIN_CREDENTIALS = {
-  email: 'admin@paddleplace.com',
+  email: 'admin@paddleplace.ph',
   password: 'Admin123!',
 };
 
@@ -70,7 +70,6 @@ export const BOOKING_STATUS_META: Record<
     border: 'border-error/40',
     dot: 'bg-error',
   },
-  // ✅ NEW — added for expired pending payments
   expired: {
     label: 'Expired',
     color: 'text-cream-muted',
@@ -79,20 +78,19 @@ export const BOOKING_STATUS_META: Record<
     dot: 'bg-forest-400',
   },
   refunded: {
-  label: 'Refunded',
-  color: 'text-purple-300',
-  bg: 'bg-purple-500/15',
-  border: 'border-purple-500/40',
-  dot: 'bg-purple-400',
-},
+    label: 'Refunded',
+    color: 'text-purple-300',
+    bg: 'bg-purple-500/15',
+    border: 'border-purple-500/40',
+    dot: 'bg-purple-400',
+  },
 };
 
 export const COURT_IMAGES = {
-  
   court1: 'https://images.pexels.com/photos/17299530/pexels-photo-17299530.jpeg?auto=compress&cs=tinysrgb&w=1200',
   court2: 'https://images.pexels.com/photos/32975182/pexels-photo-32975182.jpeg?auto=compress&cs=tinysrgb&w=1200',
   court3: 'https://images.pexels.com/photos/27151849/pexels-photo-27151849.jpeg?auto=compress&cs=tinysrgb&w=1200',
-  hero: '/images/paddle-hero.jpg',
+  hero: '/images/paddle-hero.jpg',                                // ✅ Verified: matches your disk file
   gallery1: 'https://images.pexels.com/photos/17299531/pexels-photo-17299531.jpeg?auto=compress&cs=tinysrgb&w=800',
   gallery2: 'https://images.pexels.com/photos/17299528/pexels-photo-17299528.jpeg?auto=compress&cs=tinysrgb&w=800',
   gallery3: 'https://images.pexels.com/photos/19642670/pexels-photo-19642670.jpeg?auto=compress&cs=tinysrgb&w=800',
