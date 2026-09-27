@@ -16,6 +16,12 @@ import {
   CloudSun,
   Users,
   UserCircle2,
+  Wifi,
+  Car,
+  Coffee,
+  Armchair,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -254,13 +260,11 @@ export function Landing() {
             alt="Paddle Place Court"
             className="h-full w-full object-cover object-[75%_center] md:object-right"
           />
-          {/* 1. Left-to-right shade: keeps text high-contrast and readable */}
+          {/* Left-to-right shade */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#061A1C]/95 via-[#071F22]/75 to-transparent" />
-          
-          {/* 2. Top-to-bottom shade: darkens navbar area without washing out the photo bottom */}
+          {/* Top-to-bottom shade */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#061A1C]/80 via-transparent to-black/60" />
-          
-          {/* 3. Subtle bottom seam: tight 80px dark-to-light blend only at the boundary */}
+          {/* Subtle bottom seam */}
           <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#F8FAF9] to-transparent opacity-30" />
         </div>
 
@@ -333,6 +337,7 @@ export function Landing() {
               </Button>
             </div>
 
+            {/* Location & Operating Hours */}
             <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-white/70 sm:mt-10 sm:gap-6 sm:text-sm">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[#B6DAC8]" />
@@ -342,6 +347,28 @@ export function Landing() {
                 <Clock className="h-4 w-4 text-[#B6DAC8]" />
                 <span>Open 5AM - 12AM</span>
               </div>
+            </div>
+
+            {/* Hero Quick Amenity Badges */}
+            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
+                🎾 Silica Sand Court
+              </span>
+              <span className="inline-flex items-center rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-bold text-[#B6DAC8] backdrop-blur-md">
+                🏓 Paddle Rental ₱30/hr
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                ☕ In-House Cafe & CR
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                🚗 Own Parking
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                📶 Free Wi-Fi
+              </span>
+              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                ☂️ Shaded Waiting Area
+              </span>
             </div>
           </motion.div>
         </div>
@@ -633,7 +660,6 @@ export function Landing() {
                       No courts found.
                     </div>
                   ) : (
-                    /* Adaptive wrapper: centered card for 1 court, scrollable grid for multiple */
                     <div className="block">
                       <div className="max-h-[75vh] overflow-y-auto overflow-x-auto rounded-2xl border border-[#688D87]/20 bg-[#F8FAF9]/80">
                         <div
@@ -752,6 +778,80 @@ export function Landing() {
           </div>
         </section>
       </div>
+
+      {/* Facility & Court Amenities Section */}
+      <section className="border-b border-[#688D87]/20 bg-white py-12 sm:py-16">
+        <div className="container-page">
+          <div className="mb-8 text-center sm:mb-12">
+            <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#115259]">
+              Court Specs & Comfort
+            </span>
+            <h2 className="mt-1 font-display text-2xl font-extrabold tracking-tight text-[#162422] sm:text-3xl">
+              Venue Amenities
+            </h2>
+            <p className="mt-2 text-xs text-[#526E69] sm:text-sm">
+              Designed for serious rallies and relaxed post-match hangouts
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
+            {[
+              {
+                icon: Layers,
+                title: 'Silica Sand Finish',
+                desc: 'Consistent ball bounce & optimal joint-safe traction',
+              },
+              {
+                icon: Sparkles,
+                title: 'Paddle Rental',
+                desc: '₱30 / hour — quality gear available on-site',
+              },
+              {
+                icon: Coffee,
+                title: 'In-House Cafe',
+                desc: 'Refreshments, drinks, and snacks right beside the court',
+              },
+              {
+                icon: Car,
+                title: 'Dedicated Parking',
+                desc: 'Private, secure parking area for cars & motorcycles',
+              },
+              {
+                icon: Armchair,
+                title: 'Shaded Waiting Area',
+                desc: 'Comfortable covered benches while waiting for your slot',
+              },
+              {
+                icon: Wifi,
+                title: 'Free Wi-Fi & Restroom',
+                desc: 'Stay connected and enjoy clean, private comfort rooms',
+              },
+            ].map((item, idx) => {
+              const Icon = item.icon;
+              return (
+                <motion.div
+                  key={item.title}
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="flex flex-col items-center rounded-2xl border border-[#688D87]/20 bg-[#F8FAF9] p-4 text-center transition hover:border-[#115259]/40 hover:bg-[#F2F7F5] hover:shadow-sm"
+                >
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-[#E8F2EE] text-[#115259]">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-display text-xs font-bold text-[#162422] sm:text-sm">
+                    {item.title}
+                  </h3>
+                  <p className="mt-1 text-[11px] leading-snug text-[#526E69]">
+                    {item.desc}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Sticky Mobile Reservation Bar */}
       {selectedSlotIds.length > 0 && (
