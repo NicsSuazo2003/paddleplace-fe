@@ -364,7 +364,7 @@ export function Landing() {
                 🚗 Own Parking
               </span>
               <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                📶 Free Wi-Fi
+                📶 Piso Wi-Fi
               </span>
               <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
                 ☂️ Shaded Waiting Area
@@ -823,7 +823,7 @@ export function Landing() {
               },
               {
                 icon: Wifi,
-                title: 'Free Wi-Fi & Restroom',
+                title: 'Piso Wi-Fi & Restroom',
                 desc: 'Stay connected and enjoy clean, private comfort rooms',
               },
             ].map((item, idx) => {
