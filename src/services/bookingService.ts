@@ -240,7 +240,7 @@ export const bookingService = {
   try {
     const token = localStorage.getItem('admin_token');
     const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL || 'https://pickleballcourbookingv2.onrender.com'}/api/bookings/${bookingId}/upload-payment`,
+      `${import.meta.env.VITE_API_BASE_URL || 'https://pickleballbookingclientb.onrender.com'}/api/bookings/${bookingId}/upload-payment`,
       {
         method: 'POST',
         headers: {
