@@ -349,25 +349,31 @@ export function Landing() {
               </div>
             </div>
 
-            {/* Hero Quick Amenity Badges */}
+            {/* Hero Quick Amenity Badges (Lucide SVG Icons) */}
             <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
-                🎾 Silica Sand Court
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
+                <Layers className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Silica Sand Court</span>
               </span>
-              <span className="inline-flex items-center rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-bold text-[#B6DAC8] backdrop-blur-md">
-                🏓 Paddle Rental ₱30/hr
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-semibold text-[#B6DAC8] backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Paddle Rental ₱30/hr</span>
               </span>
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                ☕ In-House Cafe & CR
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Coffee className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>In-House Cafe & CR</span>
               </span>
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                🚗 Own Parking
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Car className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Own Parking</span>
               </span>
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                📶 Piso Wi-Fi
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Wifi className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Piso Wi-Fi</span>
               </span>
-              <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                ☂️ Shaded Waiting Area
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Armchair className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Shaded Waiting Area</span>
               </span>
             </div>
           </motion.div>
