@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { Analytics, Booking, BookingStatus, Court, BlockedDate, PaymentMethod } from '@/types';
 import { adminService } from '@/services/adminService';
 
-// ✅ Type for the manual booking payload — matches adminService.createManualBooking
 export interface ManualBookingPayload {
   court_id: string;
   date: string;
@@ -37,10 +36,11 @@ interface AdminStoreState {
     search?: string;
   }) => Promise<void>;
   updateBookingStatus: (bookingId: string, status: BookingStatus) => Promise<void>;
-  // ✅ NEW: staff/admin manual booking
   createManualBooking: (payload: ManualBookingPayload) => Promise<Booking>;
   loadCourts: () => Promise<void>;
   updateCourt: (court: Court) => Promise<void>;
+  createCourt: (court: Partial<Court>) => Promise<Court>;
+  deleteCourt: (id: string) => Promise<void>;
   loadBlockedDates: (courtId?: string) => Promise<void>;
   addBlockedDate: (blocked: Omit<BlockedDate, 'id'>) => Promise<void>;
   removeBlockedDate: (id: string) => Promise<void>;
@@ -98,11 +98,9 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
     }
   },
 
-  // ✅ NEW: Create a booking on behalf of a customer (admin or staff)
   createManualBooking: async (payload) => {
     try {
       const booking = await adminService.createManualBooking(payload);
-      // Prepend so it shows up first in the list
       set((state) => ({ bookings: [booking, ...state.bookings] }));
       return booking;
     } catch (err) {
@@ -134,6 +132,28 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
       }));
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Failed to update court' });
+      throw err;
+    }
+  },
+
+  createCourt: async (court) => {
+    try {
+      const created = await adminService.createCourt(court);
+      set((state) => ({ courts: [...state.courts, created] }));
+      return created;
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to create court' });
+      throw err;
+    }
+  },
+
+  deleteCourt: async (id) => {
+    try {
+      await adminService.deleteCourt(id);
+      set((state) => ({ courts: state.courts.filter((c) => c.id !== id) }));
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : 'Failed to delete court' });
+      throw err;
     }
   },
 

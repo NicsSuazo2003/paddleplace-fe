@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Building2, Edit3, Save, X } from 'lucide-react';
+import { Building2, Edit3, Save, Trash2, Plus, AlertTriangle } from 'lucide-react';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -12,14 +12,39 @@ import { AMENITIES_LIST } from '@/utils/constants';
 import type { Court } from '@/types';
 import { ImageUpload } from '@/components/ui/ImageUpload';
 
+const BLANK_COURT: Court = {
+  id: '',
+  name: '',
+  description: '',
+  image: '',
+  image_url: '',
+  price_per_hour: 300,
+  peak_price_per_hour: 400,
+  open_time: '06:00',
+  close_time: '22:00',
+  amenities: [],
+  surface: 'Acrylic',
+  dimensions: '44ft x 20ft',
+  images: [],
+  rating: 4.8,
+  type: 'indoor',
+  is_indoor: true,
+  is_active: true,
+  status: 'active',
+};
+
 export function Courts() {
   const courts = useAdminStore((state) => state.courts);
   const loadingCourts = useAdminStore((state) => state.loadingCourts);
   const loadCourts = useAdminStore((state) => state.loadCourts);
   const updateCourt = useAdminStore((state) => state.updateCourt);
+  const createCourt = useAdminStore((state) => state.createCourt);
+  const deleteCourt = useAdminStore((state) => state.deleteCourt);
 
   const [editing, setEditing] = useState<Court | null>(null);
+  const [deleting, setDeleting] = useState<Court | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     loadCourts();
@@ -29,8 +54,26 @@ export function Courts() {
     if (!editing) return;
     setSaving(true);
     try {
-      await updateCourt(editing);
+      if (editing.id) {
+        await updateCourt(editing);
+      } else {
+        await createCourt(editing);
+      }
       setEditing(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleting?.id) return;
+    setSaving(true);
+    setDeleteError(null);
+    try {
+      await deleteCourt(deleting.id);
+      setDeleting(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Delete failed');
     } finally {
       setSaving(false);
     }
@@ -58,13 +101,22 @@ export function Courts() {
   return (
     <AdminLayout>
       <div className="container-page py-6 sm:py-8 text-cream">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
-            Courts Management
-          </h1>
-          <p className="mt-1 text-xs text-cream-muted sm:text-sm">
-            Manage court details, peak/off-peak pricing, and available amenities
-          </p>
+        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 sm:mb-8">
+          <div>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-cream sm:text-3xl">
+              Courts Management
+            </h1>
+            <p className="mt-1 text-xs text-cream-muted sm:text-sm">
+              Manage court details, peak/off-peak pricing, and available amenities
+            </p>
+          </div>
+          <Button
+            size="sm"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={() => setEditing({ ...BLANK_COURT })}
+          >
+            Add Court
+          </Button>
         </div>
 
         {loadingCourts ? (
@@ -73,7 +125,7 @@ export function Courts() {
           <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/60 py-12 text-center shadow-xl backdrop-blur-sm">
             <Building2 className="mx-auto h-12 w-12 text-cream-muted/40" />
             <p className="mt-4 text-sm font-medium text-cream-muted">No courts found.</p>
-            <p className="text-xs text-cream-muted/60">Configure your venue courts to get started.</p>
+            <p className="text-xs text-cream-muted/60">Click &quot;Add Court&quot; to create one.</p>
           </div>
         ) : (
           <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -172,7 +224,7 @@ export function Courts() {
                     </div>
                   </div>
 
-                  <div className="p-4 pt-0 sm:p-5 sm:pt-0">
+                  <div className="flex gap-2 p-4 pt-0 sm:p-5 sm:pt-0">
                     <Button
                       size="sm"
                       variant="secondary"
@@ -181,7 +233,17 @@ export function Courts() {
                       onClick={() => court && setEditing({ ...court })}
                       disabled={!court}
                     >
-                      Edit Court Details
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                      onClick={() => court && setDeleting(court)}
+                      disabled={!court}
+                      className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                    >
+                      Delete
                     </Button>
                   </div>
                 </motion.div>
@@ -191,25 +253,24 @@ export function Courts() {
         )}
       </div>
 
-      {/* ─────────────────────── Edit Court Modal ─────────────────────── */}
       {editing && (
         <Modal
           isOpen={!!editing}
           onClose={() => setEditing(null)}
-          title={`Edit ${editing?.name || 'Court'}`}
+          title={editing.id ? `Edit ${editing.name || 'Court'}` : 'Add New Court'}
           size="lg"
         >
           <div className="space-y-4">
             <Input
               label="Court Name"
-              value={editing?.name || ''}
+              value={editing.name || ''}
               onChange={(e) => setEditing({ ...editing, name: e.target.value })}
             />
 
             <Textarea
               label="Description"
               rows={2}
-              value={editing?.description || ''}
+              value={editing.description || ''}
               onChange={(e) => setEditing({ ...editing, description: e.target.value })}
             />
 
@@ -217,7 +278,7 @@ export function Courts() {
               <Input
                 label="Price per Hour (Off-Peak)"
                 type="number"
-                value={editing?.price_per_hour || 0}
+                value={editing.price_per_hour || 0}
                 onChange={(e) =>
                   setEditing({ ...editing, price_per_hour: Number(e.target.value) })
                 }
@@ -225,7 +286,7 @@ export function Courts() {
               <Input
                 label="Peak Price per Hour"
                 type="number"
-                value={editing?.peak_price_per_hour || 0}
+                value={editing.peak_price_per_hour || 0}
                 onChange={(e) =>
                   setEditing({ ...editing, peak_price_per_hour: Number(e.target.value) })
                 }
@@ -233,20 +294,20 @@ export function Courts() {
               <Input
                 label="Opening Time"
                 type="time"
-                value={editing?.open_time || '08:00'}
+                value={editing.open_time || '08:00'}
                 onChange={(e) => setEditing({ ...editing, open_time: e.target.value })}
               />
               <Input
                 label="Closing Time"
                 type="time"
-                value={editing?.close_time || '22:00'}
+                value={editing.close_time || '22:00'}
                 onChange={(e) => setEditing({ ...editing, close_time: e.target.value })}
               />
             </div>
 
             <ImageUpload
               label="Court Image"
-              value={editing?.image || editing?.image_url || ''}
+              value={editing.image || editing.image_url || ''}
               onChange={(url) => setEditing({ ...editing, image: url, image_url: url })}
               folder="courts"
             />
@@ -254,7 +315,7 @@ export function Courts() {
             <Input
               label="Surface Type"
               placeholder="e.g. Acrylic Sport Coating, Concrete"
-              value={editing?.surface || ''}
+              value={editing.surface || ''}
               onChange={(e) => setEditing({ ...editing, surface: e.target.value })}
             />
 
@@ -264,7 +325,7 @@ export function Courts() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {AMENITIES_LIST.map((a) => {
-                  const isSelected = editing?.amenities?.includes(a) || false;
+                  const isSelected = editing.amenities?.includes(a) || false;
                   return (
                     <button
                       key={a}
@@ -287,7 +348,7 @@ export function Courts() {
               <label className="flex items-center gap-2 text-xs font-semibold text-cream cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editing?.is_indoor || false}
+                  checked={editing.is_indoor || false}
                   onChange={(e) => setEditing({ ...editing, is_indoor: e.target.checked })}
                   className="h-4 w-4 rounded border-forest-600 bg-forest-950 accent-brand-blue-500 cursor-pointer"
                 />
@@ -296,7 +357,7 @@ export function Courts() {
               <label className="flex items-center gap-2 text-xs font-semibold text-cream cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={editing?.is_active || false}
+                  checked={editing.is_active || false}
                   onChange={(e) => setEditing({ ...editing, is_active: e.target.checked })}
                   className="h-4 w-4 rounded border-forest-600 bg-forest-950 accent-brand-blue-500 cursor-pointer"
                 />
@@ -304,7 +365,6 @@ export function Courts() {
               </label>
             </div>
 
-            {/* Modal Actions */}
             <div className="sticky bottom-0 -mx-4 -mb-4 mt-5 border-t border-forest-700/80 bg-forest-900/95 p-4 backdrop-blur-sm sm:static sm:mx-0 sm:mb-0 sm:bg-transparent sm:p-0 sm:pt-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                 <Button
@@ -314,7 +374,7 @@ export function Courts() {
                   leftIcon={<Save className="h-4 w-4" />}
                   onClick={handleSave}
                 >
-                  Save Changes
+                  {editing.id ? 'Save Changes' : 'Create Court'}
                 </Button>
                 <Button
                   size="md"
@@ -326,6 +386,62 @@ export function Courts() {
                   Cancel
                 </Button>
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {deleting && (
+        <Modal
+          isOpen={!!deleting}
+          onClose={() => {
+            setDeleting(null);
+            setDeleteError(null);
+          }}
+          title="Delete Court"
+          size="sm"
+        >
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-400" />
+              <div className="text-sm text-cream">
+                <p className="font-semibold">Delete &quot;{deleting.name}&quot; permanently?</p>
+                <p className="mt-1 text-xs text-cream-muted">
+                  This cannot be undone. If the court has existing bookings, deletion may
+                  fail — deactivate it instead.
+                </p>
+              </div>
+            </div>
+
+            {deleteError && (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              <Button
+                size="md"
+                fullWidth
+                isLoading={saving}
+                leftIcon={<Trash2 className="h-4 w-4" />}
+                onClick={handleDelete}
+                className="bg-red-500 text-white hover:bg-red-600"
+              >
+                Delete Court
+              </Button>
+              <Button
+                size="md"
+                variant="ghost"
+                fullWidth
+                className="sm:w-auto"
+                onClick={() => {
+                  setDeleting(null);
+                  setDeleteError(null);
+                }}
+              >
+                Cancel
+              </Button>
             </div>
           </div>
         </Modal>

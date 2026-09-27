@@ -4,10 +4,11 @@ import { apiRequest } from './api';
 import { mockCourts, generateMockSlots, mockBlockedDates } from './mockData';
 import { MOCK_COURT_GUIDS } from './bookingService';
 
-// Check if we should use mock data
 const USE_MOCK_DATA = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
-const BACKEND_BASE_URL = 'https://pickleballcourbookingv2.onrender.com';
+// ✅ FIXED: use the same base URL as apiRequest, not a hardcoded wrong one
+const BACKEND_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'https://pickleballbookingclientb.onrender.com';
 
 const DEFAULT_COURT_IMAGES = [
   'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
@@ -28,12 +29,10 @@ export function normalizeCourt(raw: any, index: number = 0): Court {
   const resolvedImg = resolveImageUrl(rawImg);
   const fallback = DEFAULT_COURT_IMAGES[index % DEFAULT_COURT_IMAGES.length];
 
-  // If ID is not a valid GUID, generate one for frontend use
   let id = raw.id;
   const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-  
+
   if (!isGuid && USE_MOCK_DATA) {
-    // In mock mode, map to our mock GUIDs
     if (id === 'court-1') id = MOCK_COURT_GUIDS['court-1'];
     else if (id === 'court-2') id = MOCK_COURT_GUIDS['court-2'];
     else if (id === 'court-3') id = MOCK_COURT_GUIDS['court-3'];
@@ -64,7 +63,7 @@ export function normalizeCourt(raw: any, index: number = 0): Court {
 export function buildCourtPayload(court: Court): Record<string, any> {
   const img = court.image_url || court.image || '';
   return {
-    id: court.id,
+    id: court.id || undefined,
     name: court.name,
     type: court.type || 'indoor',
     indoor: court.is_indoor !== undefined ? court.is_indoor : true,
@@ -112,7 +111,6 @@ export function normalizeSlot(raw: any, fallbackDate: string): TimeSlot {
 
 export const courtService = {
   async getCourts(): Promise<Court[]> {
-    // If mock mode is enabled, return mock data
     if (USE_MOCK_DATA) {
       console.warn('🔧 Using mock court data (development mode)');
       return mockCourts;
@@ -122,7 +120,7 @@ export const courtService = {
       console.log('📡 Fetching courts from backend...');
       const res = await apiRequest<any>('/api/courts');
       console.log('📡 Backend response:', res);
-      
+
       let rawList = [];
       if (Array.isArray(res)) {
         rawList = res;
@@ -134,23 +132,21 @@ export const courtService = {
         console.warn('Unexpected courts response format:', res);
         return [];
       }
-      
+
       if (rawList.length === 0) {
         console.warn('⚠️ No courts found in backend');
-        // In development, fallback to mock data
         if (import.meta.env.DEV) {
           console.warn('🔧 Backend returned no courts, using mock data as fallback');
           return mockCourts;
         }
         return [];
       }
-      
+
       const courts = rawList.map((item: any, idx: number) => normalizeCourt(item, idx));
       console.log(`✅ Loaded ${courts.length} courts from backend`);
       return courts;
     } catch (error) {
       console.error('❌ Failed to fetch courts:', error);
-      // In development, fallback to mock data
       if (import.meta.env.DEV) {
         console.warn('🔧 Backend unavailable, using mock data as fallback');
         return mockCourts;
@@ -160,7 +156,6 @@ export const courtService = {
   },
 
   async getCourt(id: string): Promise<Court> {
-    // If mock mode is enabled, return mock data
     if (USE_MOCK_DATA) {
       const court = mockCourts.find((c) => c.id === id);
       if (court) return court;
@@ -181,7 +176,6 @@ export const courtService = {
   },
 
   async getAvailability(courtId: string, date: string): Promise<TimeSlot[]> {
-    // If mock mode is enabled, return mock slots
     if (USE_MOCK_DATA) {
       console.warn('🔧 Using mock slot data (development mode)');
       return generateMockSlots(courtId, date);
@@ -191,9 +185,9 @@ export const courtService = {
       console.log(`📡 Fetching availability for court ${courtId} on ${date}...`);
       const res = await apiRequest<any>(`/api/courts/${courtId}/availability?date=${date}`);
       console.log('📡 Availability response:', res);
-      
+
       const rawList = Array.isArray(res) ? res : res?.data || res?.slots || [];
-      
+
       if (rawList.length === 0) {
         console.warn('⚠️ No slots found in backend');
         if (import.meta.env.DEV) {
@@ -202,16 +196,15 @@ export const courtService = {
         }
         return [];
       }
-      
-      // ✅ Add court_id to each slot (backend doesn't include it in response)
+
       const slots = rawList.map((item: any) => {
         const normalized = normalizeSlot(item, date);
         return {
           ...normalized,
-          court_id: courtId // ✅ Force the court_id from the request
+          court_id: courtId,
         };
       });
-      
+
       console.log(`✅ Loaded ${slots.length} slots from backend`);
       return slots;
     } catch (error) {

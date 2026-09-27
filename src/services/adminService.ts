@@ -13,14 +13,13 @@ function normalizeClientSettings(raw: any): ClientSettings {
     accent_color: data.accentColor ?? data.accent_color ?? '#C9A94E',
     gcash_number: data.gcashNumber ?? data.gcash_number ?? null,
     gcash_account_name: data.gcashAccountName ?? data.gcash_account_name ?? null,
-    payment_methods: data.paymentMethods ?? data.payment_methods ?? [], // ✅ Already here
+    payment_methods: data.paymentMethods ?? data.payment_methods ?? [],
   };
 }
+
 function normalizeAnalytics(raw: any): Analytics {
   const data = raw?.data ?? raw;
 
-  // Check multiple possible key names the backend might use, instead of
-  // assuming camelCase revenueByDay is the only possibility.
   const rawRevenueByDay =
     data.revenueByDay ??
     data.revenue_by_day ??
@@ -30,19 +29,12 @@ function normalizeAnalytics(raw: any): Analytics {
     [];
 
   if (rawRevenueByDay.length === 0) {
-    // Temporary diagnostic — remove once confirmed fixed. This tells you
-    // exactly what keys the backend actually sent, so you're not guessing.
     console.warn(
       '[analytics] revenue_by_day resolved to an empty array. Raw analytics keys:',
       Object.keys(data)
     );
   }
 
-  // ✅ Only use actual revenue-bearing days here. Do NOT merge in
-  // bookingsByDay dates — those can include days that have bookings but
-  // $0 confirmed/completed revenue (e.g. still payment_submitted), which
-  // used to show up as extra near-zero-height bars on the revenue chart
-  // and made the x-axis look non-contiguous (duplicate weekday labels).
   const revenueByDay = rawRevenueByDay
     .map((d: any) => ({
       date: d.date || '',
@@ -108,28 +100,28 @@ export const adminService = {
     return normalizeClientSettings(res?.data ?? res);
   },
 
- // src/services/adminService.ts
-async updateSettings(payload: {
-  name?: string;
-  gcash_number?: string;
-  gcash_account_name?: string;
-  payment_methods?: PaymentMethod[]; // ✅ Add this
-  rcbc_account_name?: string;        // ✅ Add this
-  rcbc_qr_image?: string;            // ✅ Add this
-}): Promise<ClientSettings> {
-  const res = await apiRequest<any>('/api/admin/settings', {
-    method: 'PUT',
-    body: JSON.stringify({
-      name: payload.name,
-      gcashNumber: payload.gcash_number,
-      gcashAccountName: payload.gcash_account_name,
-      paymentMethods: payload.payment_methods, // ✅ Send to backend
-      rcbcAccountName: payload.rcbc_account_name,
-      rcbcQrImage: payload.rcbc_qr_image,
-    }),
-  });
-  return normalizeClientSettings(res?.data ?? res);
-},
+  async updateSettings(payload: {
+    name?: string;
+    gcash_number?: string;
+    gcash_account_name?: string;
+    payment_methods?: PaymentMethod[];
+    rcbc_account_name?: string;
+    rcbc_qr_image?: string;
+  }): Promise<ClientSettings> {
+    const res = await apiRequest<any>('/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: payload.name,
+        gcashNumber: payload.gcash_number,
+        gcashAccountName: payload.gcash_account_name,
+        paymentMethods: payload.payment_methods,
+        rcbcAccountName: payload.rcbc_account_name,
+        rcbcQrImage: payload.rcbc_qr_image,
+      }),
+    });
+    return normalizeClientSettings(res?.data ?? res);
+  },
+
   async getBookings(filters?: {
     status?: BookingStatus;
     courtId?: string;
@@ -171,13 +163,32 @@ async updateSettings(payload: {
     return normalizeCourt(updated);
   },
 
-  // ✅ FIXED: Use existing court endpoints for blocked dates
+  // ✅ NEW: create a court via POST /api/admin/courts
+  async createCourt(court: Partial<Court>): Promise<Court> {
+    const payload = buildCourtPayload(court as Court);
+    // Server generates the id — don't send our empty placeholder
+    delete payload.id;
+    const res = await apiRequest<any>('/api/admin/courts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    const created = res?.data ?? res?.court ?? res;
+    return normalizeCourt(created);
+  },
+
+  // ✅ NEW: delete a court via DELETE /api/admin/courts/{id}
+  async deleteCourt(id: string): Promise<void> {
+    await apiRequest<void>(`/api/admin/courts/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   async getBlockedDates(courtId?: string): Promise<BlockedDate[]> {
     if (!courtId) {
       console.warn('No court selected, returning empty blocked dates');
       return [];
     }
-    
+
     try {
       const res = await apiRequest<any>(`/api/courts/${courtId}/blocked-dates`);
       const rawList = Array.isArray(res) ? res : res?.data || [];
@@ -195,26 +206,24 @@ async updateSettings(payload: {
     }
   },
 
-  // ✅ FIXED: Use existing court endpoint for adding blocked dates with time support
   async addBlockedDate(blocked: Omit<BlockedDate, 'id'>): Promise<BlockedDate> {
     const payload: any = {
       date: blocked.date,
       reason: blocked.reason,
     };
-    
-    // ✅ Only include startTime and endTime if they exist
+
     if ((blocked as any).startTime) {
       payload.startTime = (blocked as any).startTime;
     }
     if ((blocked as any).endTime) {
       payload.endTime = (blocked as any).endTime;
     }
-    
+
     const res = await apiRequest<any>(`/api/courts/${blocked.court_id}/blocked-dates`, {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    
+
     const created = res?.data ?? res;
     return {
       id: created.id || '',
@@ -226,14 +235,12 @@ async updateSettings(payload: {
     };
   },
 
-  // ✅ FIXED: Use the correct delete endpoint (courts, not admin)
   async removeBlockedDate(id: string): Promise<void> {
-    await apiRequest<void>(`/api/courts/blocked-dates/${id}`, { 
-      method: 'DELETE' 
+    await apiRequest<void>(`/api/courts/blocked-dates/${id}`, {
+      method: 'DELETE',
     });
   },
 
-  // Staff Management Methods
   async createStaff(data: {
     name: string;
     email: string;
@@ -261,37 +268,37 @@ async updateSettings(payload: {
   },
 
   async createManualBooking(payload: {
-  court_id: string;
-  date: string;
-  slots: { start_time: string; end_time: string }[];
-  customer_name: string;
-  customer_email?: string;
-  customer_phone?: string;
-  notes?: string;
-  payment_mode: 'cash' | 'gcash' | 'pay_later' | 'free';
-  total_amount?: number;
-  staff_notes?: string;
-  send_confirmation?: boolean;
-}): Promise<Booking> {
-  const res = await apiRequest<any>('/api/admin/bookings/manual', {
-    method: 'POST',
-    body: JSON.stringify({
-      courtId: payload.court_id,
-      date: payload.date,
-      slots: payload.slots.map(s => ({
-        startTime: s.start_time,
-        endTime: s.end_time,
-      })),
-      customerName: payload.customer_name,
-      customerEmail: payload.customer_email || null,
-      customerPhone: payload.customer_phone || null,
-      notes: payload.notes || null,
-      paymentMode: payload.payment_mode,
-      totalAmount: payload.total_amount ?? null,
-      staffNotes: payload.staff_notes || null,
-      sendConfirmation: payload.send_confirmation ?? false,
-    }),
-  });
-  return normalizeBooking(res?.data ?? res);
-},
+    court_id: string;
+    date: string;
+    slots: { start_time: string; end_time: string }[];
+    customer_name: string;
+    customer_email?: string;
+    customer_phone?: string;
+    notes?: string;
+    payment_mode: 'cash' | 'gcash' | 'pay_later' | 'free';
+    total_amount?: number;
+    staff_notes?: string;
+    send_confirmation?: boolean;
+  }): Promise<Booking> {
+    const res = await apiRequest<any>('/api/admin/bookings/manual', {
+      method: 'POST',
+      body: JSON.stringify({
+        courtId: payload.court_id,
+        date: payload.date,
+        slots: payload.slots.map((s) => ({
+          startTime: s.start_time,
+          endTime: s.end_time,
+        })),
+        customerName: payload.customer_name,
+        customerEmail: payload.customer_email || null,
+        customerPhone: payload.customer_phone || null,
+        notes: payload.notes || null,
+        paymentMode: payload.payment_mode,
+        totalAmount: payload.total_amount ?? null,
+        staffNotes: payload.staff_notes || null,
+        sendConfirmation: payload.send_confirmation ?? false,
+      }),
+    });
+    return normalizeBooking(res?.data ?? res);
+  },
 };
