@@ -244,11 +244,18 @@ export function Settings() {
       uploadData.append('file', file);
       const token = localStorage.getItem('admin_token');
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/files/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: uploadData,
-      });
+      const baseUrl =
+  import.meta.env.VITE_API_BASE_URL ?? APP_CONFIG.apiUrl;
+
+const response = await fetch(`${baseUrl}/api/files/upload`, {
+  method: 'POST',
+  headers: {
+    'X-Client-Subdomain':
+      import.meta.env.VITE_CLIENT_SUBDOMAIN ?? 'paddleplace',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  },
+  body: uploadData,
+});
 
       if (!response.ok) {
         const errorData = await response.json();
