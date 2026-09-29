@@ -12,6 +12,7 @@ export function formatTimeRange(start?: string | null, end?: string | null): str
   if (!start || !end) return 'Time TBD';
   return `${formatTime(start)} - ${formatTime(end)}`;
 }
+
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-PH', {
     style: 'currency',
@@ -106,4 +107,84 @@ export function getMonthMatrix(year: number, month: number): Date[][] {
     if (week[6].getMonth() !== month && week[0].getMonth() !== month) break;
   }
   return weeks;
+}
+
+// ═════════════════════════════════════════════════════════════
+// Slot collapsing — turn many hourly slots into readable ranges
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Collapses contiguous hourly slots into merged ranges.
+ *
+ * Input:  [{ start_time: '18:00', end_time: '19:00' },
+ *          { start_time: '19:00', end_time: '20:00' },
+ *          { start_time: '20:00', end_time: '21:00' }]
+ * Output: [{ start: '18:00', end: '21:00', hours: 3 }]
+ */
+export function collapseSlots(
+  slots: { start_time: string; end_time: string }[] | undefined
+): { start: string; end: string; hours: number }[] {
+  if (!slots || slots.length === 0) return [];
+
+  // Sort chronologically first — the API doesn't guarantee order
+  const sorted = [...slots].sort((a, b) =>
+    a.start_time.localeCompare(b.start_time)
+  );
+
+  const ranges: { start: string; end: string; hours: number }[] = [];
+  let current = {
+    start: sorted[0].start_time,
+    end: sorted[0].end_time,
+    hours: 1,
+  };
+
+  for (let i = 1; i < sorted.length; i++) {
+    const slot = sorted[i];
+    if (slot.start_time === current.end) {
+      // Contiguous — extend the current range
+      current.end = slot.end_time;
+      current.hours += 1;
+    } else {
+      // Gap — flush current, start new range
+      ranges.push(current);
+      current = {
+        start: slot.start_time,
+        end: slot.end_time,
+        hours: 1,
+      };
+    }
+  }
+  ranges.push(current);
+
+  return ranges;
+}
+
+/**
+ * Formats booking slots into a compact human-readable string.
+ *
+ * Examples:
+ *   24 hourly slots 00:00–24:00  →  "All day · 24 hrs"
+ *   4 hourly slots 18:00–22:00   →  "6:00 PM - 10:00 PM · 4 hrs"
+ *   3 hourly slots 19:00–22:00   →  "7:00 PM - 10:00 PM · 3 hrs"
+ *   2 non-contiguous blocks      →  "4:00 PM - 6:00 PM · 8:00 PM - 10:00 PM"
+ *   Single slot 18:00–19:00      →  "6:00 PM - 7:00 PM"
+ */
+export function formatSlotsSummary(
+  slots: { start_time: string; end_time: string }[] | undefined
+): string {
+  if (!slots || slots.length === 0) return 'No slots';
+
+  const ranges = collapseSlots(slots);
+
+  // Full-day booking — collapse to "All day"
+  if (ranges.length === 1 && ranges[0].hours >= 24) {
+    return `All day · ${ranges[0].hours} hrs`;
+  }
+
+  return ranges
+    .map((r) => {
+      const formatted = formatTimeRange(r.start, r.end);
+      return r.hours > 1 ? `${formatted} · ${r.hours} hrs` : formatted;
+    })
+    .join(' · ');
 }

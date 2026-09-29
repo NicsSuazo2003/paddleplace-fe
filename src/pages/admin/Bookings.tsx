@@ -25,6 +25,7 @@ import {
   formatCurrency,
   formatDateLong,
   formatDateTime,
+  formatSlotsSummary,
 } from '@/utils/format';
 import type { Booking, BookingStatus } from '@/types';
 
@@ -203,10 +204,8 @@ export function Bookings() {
                       <td className="px-4 py-3.5 text-xs text-cream-muted">
                         {formatDateLong(b.date)}
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-cream-muted">
-                        {b.slots
-                          ?.map((s) => formatTimeRange(s.start_time, s.end_time))
-                          .join(', ') || 'No slots'}
+                      <td className="px-4 py-3.5 text-xs text-cream-muted max-w-[280px]">
+                        {formatSlotsSummary(b.slots)}
                       </td>
                       <td className="px-4 py-3.5 font-bold text-brand-blue-300">
                         {formatCurrency(b.total_amount || 0)}
@@ -248,9 +247,7 @@ export function Bookings() {
                       {b.court_name || 'Unknown Court'} — {formatDateLong(b.date)}
                     </p>
                     <p className="mt-1 text-xs text-cream-muted/90">
-                      {b.slots
-                        ?.map((s) => formatTimeRange(s.start_time, s.end_time))
-                        .join(', ') || 'No slots'}
+                      {formatSlotsSummary(b.slots)}
                     </p>
                   </div>
                   {b.payment_reference && (
@@ -322,9 +319,7 @@ export function Bookings() {
                     {formatDateLong(selectedBooking.date)}
                   </p>
                   <p className="mt-1.5 text-xs text-cream-muted">
-                    {selectedBooking.slots
-                      ?.map((s) => formatTimeRange(s.start_time, s.end_time))
-                      .join(', ') || 'No slots'}
+                    {formatSlotsSummary(selectedBooking.slots)}
                   </p>
                 </div>
               </div>
