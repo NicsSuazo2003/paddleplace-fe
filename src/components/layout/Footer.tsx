@@ -1,20 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Shield, MapPin, Phone, Clock, Instagram, Facebook } from 'lucide-react';
-import { Logo } from '@/components/Logo';
 import { APP_CONFIG } from '@/utils/constants';
-import { useClientStore } from '@/stores/clientStore';
 
 export function Footer() {
-  const settings = useClientStore((state) => state.settings);
-  const displayNumber = settings?.gcash_number || APP_CONFIG.gcashNumber;
-
   return (
     <footer className="border-t border-[#688D87]/20 bg-[#0A2629] text-white">
       <div className="container-page py-10 sm:py-14">
         {/* Brand & Social Links */}
         <div className="mb-8 sm:mb-10">
-          <Logo size="md" to="" />
-          <p className="mt-3 max-w-sm text-xs sm:text-sm leading-relaxed text-white/65">
+          <p className="max-w-sm text-xs sm:text-sm leading-relaxed text-white/65">
             {APP_CONFIG.tagline}
           </p>
           <div className="mt-4 flex gap-2.5">
