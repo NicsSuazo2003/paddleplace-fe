@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Shield, MapPin, Phone, Clock, Instagram, Facebook } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 import { APP_CONFIG } from '@/utils/constants';
 
 export function Footer() {
@@ -8,7 +9,8 @@ export function Footer() {
       <div className="container-page py-10 sm:py-14">
         {/* Brand & Social Links */}
         <div className="mb-8 sm:mb-10">
-          <p className="max-w-sm text-xs sm:text-sm leading-relaxed text-white/65">
+          <Logo size="md" to="" withImage={false} />
+          <p className="mt-3 max-w-sm text-xs sm:text-sm leading-relaxed text-white/65">
             {APP_CONFIG.tagline}
           </p>
           <div className="mt-4 flex gap-2.5">

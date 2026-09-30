@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 interface LogoProps {
   size?: 'sm' | 'md' | 'nav' | 'lg' | 'xl' | '2xl';
   withText?: boolean;
+  withImage?: boolean; // ← new
   to?: string;
   variant?: 'light' | 'dark'; // 'light' for dark headers/footers, 'dark' for bright backgrounds
 }
@@ -10,6 +11,7 @@ interface LogoProps {
 export function Logo({
   size = 'md',
   withText = true,
+  withImage = true, // ← new
   to = '/',
   variant = 'light',
 }: LogoProps) {
@@ -25,13 +27,15 @@ export function Logo({
 
   const content = (
     <div className="flex items-center gap-2.5 sm:gap-3">
-      <img
-        src="/images/CC.png"
-        alt="Paddle Place Logo"
-        width={s.image}
-        height={s.image}
-        className="object-contain drop-shadow-sm"
-      />
+      {withImage && (
+        <img
+          src="/images/CC.png"
+          alt="Paddle Place Logo"
+          width={s.image}
+          height={s.image}
+          className="object-contain drop-shadow-sm"
+        />
+      )}
       {withText && (
         <div className="flex flex-col leading-none">
           <span className={`font-display ${s.text} font-black tracking-tight`}>
