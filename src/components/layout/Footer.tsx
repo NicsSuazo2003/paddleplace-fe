@@ -78,11 +78,11 @@ export function Footer() {
             <ul className="space-y-2.5 text-xs text-white/70 sm:space-y-3 sm:text-sm">
               <li className="flex items-start gap-2.5">
                 <Phone className="h-4 w-4 shrink-0 text-[#B6DAC8] mt-0.5" />
-                <span>{displayNumber}</span>
+                <span>09510418675</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 shrink-0 text-[#B6DAC8] mt-0.5" />
-                <span className="leading-relaxed">San Agustin Sur "Dawis", Tandag City, Surigao del Sur</span>
+                <span className="leading-relaxed">Purok Mangga 2, Soong Barangay Purisima, Tago, Surigao Del Sur</span>
               </li>
             </ul>
           </div>
