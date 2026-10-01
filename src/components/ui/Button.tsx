@@ -27,7 +27,7 @@ type LinkButtonProps = BaseProps & {
 type Props = ButtonProps | LinkButtonProps;
 
 const variants: Record<Variant, string> = {
-  // Brand Blue (#0e4174) with crisp white text and elevation shadow
+  // Brand teal with crisp white text and elevation shadow
   primary:
     'bg-brand-blue-500 text-white hover:bg-brand-blue-400 active:bg-brand-blue-600 shadow-glow-blue font-semibold border border-brand-blue-400/40',
   secondary:
@@ -36,8 +36,9 @@ const variants: Record<Variant, string> = {
     'text-cream-muted hover:text-cream hover:bg-forest-800/60 active:bg-forest-700/60 font-medium',
   danger:
     'bg-error/15 text-error border border-error/30 hover:bg-error hover:text-white active:bg-error/90 font-semibold',
+  // ✅ FIXED: solid mint background with dark teal text
   success:
-    'bg-accentGreen-400/20 text-accentGreen-300 border border-accentGreen-400/40 hover:bg-accentGreen-400 hover:text-white active:bg-accentGreen-500 font-semibold',
+    'bg-mint-400 text-[#0E4348] border border-mint-500 hover:bg-mint-300 active:bg-mint-500 font-semibold shadow-md shadow-mint-500/20',
 };
 
 const sizes: Record<Size, string> = {

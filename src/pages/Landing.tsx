@@ -260,11 +260,8 @@ export function Landing() {
             alt="Paddle Place Court"
             className="h-full w-full object-cover object-[75%_center] md:object-right"
           />
-          {/* Left-to-right shade */}
           <div className="absolute inset-0 bg-gradient-to-r from-[#061A1C]/95 via-[#071F22]/75 to-transparent" />
-          {/* Top-to-bottom shade */}
           <div className="absolute inset-0 bg-gradient-to-b from-[#061A1C]/80 via-transparent to-black/60" />
-          {/* Subtle bottom seam */}
           <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#F8FAF9] to-transparent opacity-30" />
         </div>
 
@@ -337,7 +334,6 @@ export function Landing() {
               </Button>
             </div>
 
-            {/* Location & Operating Hours */}
             <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-white/70 sm:mt-10 sm:gap-6 sm:text-sm">
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-[#B6DAC8]" />
@@ -349,7 +345,6 @@ export function Landing() {
               </div>
             </div>
 
-            {/* Hero Quick Amenity Badges (Lucide SVG Icons) */}
             <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
                 <Layers className="h-3.5 w-3.5 text-[#B6DAC8]" />
@@ -528,19 +523,48 @@ export function Landing() {
               <div className="p-4 pb-24 sm:p-6 sm:pb-24 md:p-8 md:pb-8">
                 {/* STEP 1: Date Selection */}
                 <div className="mb-6 md:mb-10">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#115259] text-xs font-bold text-white shadow-sm">
-                      1
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#115259] text-xs font-bold text-white shadow-sm">
+                        1
+                      </div>
+                      <h3 className="font-display text-sm font-bold text-[#162422] sm:text-base">Choose Date</h3>
                     </div>
-                    <h3 className="font-display text-sm font-bold text-[#162422] sm:text-base">Choose Date</h3>
+
+                    {/* NEW: Calendar picker for jumping to any date */}
+                    <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] px-3 py-2 text-xs font-semibold text-[#115259] transition hover:border-[#115259]/40 hover:bg-[#F0F6F5]">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Pick any date</span>
+                      <span className="sm:hidden">Calendar</span>
+                      <input
+                        type="date"
+                        min={todayISO()}
+                        value={selectedDate}
+                        onChange={(e) => {
+                          if (!e.target.value) return;
+                          setDate(e.target.value);
+                          // Snap week offset so the selected date appears in the strip
+                          const picked = new Date(e.target.value + 'T00:00:00');
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const diffDays = Math.floor(
+                            (picked.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+                          );
+                          const offset = Math.max(0, Math.floor(diffDays / 7));
+                          setWeekOffset(offset);
+                        }}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        aria-label="Pick any date"
+                      />
+                    </label>
                   </div>
 
-                  <div className="relative -mx-4 overflow-hidden px-4 sm:mx-0 sm:overflow-visible sm:px-0">
+                  <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <button
                         onClick={() => setWeekOffset((w) => Math.max(0, w - 1))}
                         disabled={weekOffset === 0}
-                        className="hidden h-14 w-10 shrink-0 items-center justify-center rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] text-[#526E69] transition hover:border-[#115259]/40 hover:text-[#115259] disabled:opacity-30 sm:flex"
+                        className="flex h-14 w-10 shrink-0 items-center justify-center rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] text-[#526E69] transition hover:border-[#115259]/40 hover:text-[#115259] disabled:opacity-30"
                         aria-label="Previous week"
                       >
                         <ChevronLeft className="h-5 w-5" />
@@ -604,7 +628,7 @@ export function Landing() {
 
                       <button
                         onClick={() => setWeekOffset((w) => w + 1)}
-                        className="hidden h-14 w-10 shrink-0 items-center justify-center rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] text-[#526E69] transition hover:border-[#115259]/40 hover:text-[#115259] sm:flex"
+                        className="flex h-14 w-10 shrink-0 items-center justify-center rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] text-[#526E69] transition hover:border-[#115259]/40 hover:text-[#115259]"
                         aria-label="Next week"
                       >
                         <ChevronRight className="h-5 w-5" />
@@ -677,7 +701,6 @@ export function Landing() {
                                 : ''
                           }`}
                         >
-                          {/* Sticky Court Column Header */}
                           <div
                             className="sticky -top-4 z-30 -mx-4 -mt-4 mb-4 border-b border-[#688D87]/20 bg-white px-4 py-3 text-center text-xs font-extrabold uppercase tracking-wider text-[#115259] shadow-sm backdrop-blur-md"
                             style={{
@@ -702,7 +725,6 @@ export function Landing() {
                             })}
                           </div>
 
-                          {/* Period Sections */}
                           <div className="space-y-6">
                             {morningTimes.length > 0 && (
                               <DesktopPeriodSection
@@ -752,7 +774,6 @@ export function Landing() {
                     </div>
                   )}
 
-                  {/* Desktop reservation bar */}
                   <div className="mt-8 hidden items-center justify-between gap-4 rounded-xl border border-[#688D87]/20 bg-[#F8FAF9] p-5 sm:flex">
                     <div>
                       <span className="text-xs font-bold uppercase tracking-wider text-[#526E69]">
