@@ -110,6 +110,33 @@ export function getMonthMatrix(year: number, month: number): Date[][] {
 }
 
 // ═════════════════════════════════════════════════════════════
+// Slot helpers — flexible formatting for slot-shaped objects
+// ═════════════════════════════════════════════════════════════
+
+/**
+ * Formats a single slot's time range regardless of casing style.
+ *
+ * Accepts either camelCase (`startTime` / `endTime`) or snake_case
+ * (`start_time` / `end_time`) fields — useful when a component may
+ * receive slot data from different sources (Booking, Track, Success).
+ *
+ * Examples:
+ *   { start_time: '18:00', end_time: '19:00' }   →  "6:00 PM - 7:00 PM"
+ *   { startTime: '09:00', endTime: '11:00' }     →  "9:00 AM - 11:00 AM"
+ *   {} or invalid                                 →  "Time TBD"
+ */
+export function formatSlotRange(slot: {
+  startTime?: string | null;
+  endTime?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+}): string {
+  const start = slot.startTime ?? slot.start_time ?? null;
+  const end = slot.endTime ?? slot.end_time ?? null;
+  return formatTimeRange(start, end);
+}
+
+// ═════════════════════════════════════════════════════════════
 // Slot collapsing — turn many hourly slots into readable ranges
 // ═════════════════════════════════════════════════════════════
 

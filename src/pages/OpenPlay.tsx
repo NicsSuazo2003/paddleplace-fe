@@ -1,7 +1,10 @@
 // src/pages/OpenPlay.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   Users,
   Clock,
@@ -9,6 +12,7 @@ import {
   UserCircle2,
   ArrowRight,
   Eye,
+  Bell,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -38,6 +42,57 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   cancelled: { label: 'Cancelled', className: 'bg-forest-900/60 text-cream-muted/50 border border-forest-800' },
 };
 
+// ✅ O2 — Reuse the same PH phone normalization + validation as Booking.tsx
+const normalizePhone = (value: string) =>
+  value.replace(/[\s\-()]/g, '').replace(/^\+?63/, '0');
+
+const joinSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Name is required')
+    .max(80, 'Name is too long')
+    .regex(/^[A-Za-zÀ-ÿ.'\-\s]+$/, "Name can only contain letters, spaces, and . ' -"),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'Email is required')
+    .email('Enter a valid email address')
+    .max(120, 'Email is too long'),
+  phone: z
+    .string()
+    .trim()
+    .min(1, 'Mobile number is required')
+    .transform(normalizePhone)
+    .refine((v) => /^09\d{9}$/.test(v), {
+      message: 'Enter a valid PH mobile number (e.g. 0917 123 4567)',
+    }),
+  notes: z.string().max(500, 'Notes are too long').optional(),
+});
+
+type JoinForm = z.infer<typeof joinSchema>;
+
+/** O9 — Imminence label for sessions starting soon */
+function getImminenceLabel(session: OpenPlaySession): string | null {
+  try {
+    const sessionStart = new Date(`${session.date}T${session.start_time}`);
+    const now = new Date();
+    const diffMin = Math.round((sessionStart.getTime() - now.getTime()) / (1000 * 60));
+    if (diffMin <= -60) return null;
+    if (diffMin <= 0) return 'Happening now';
+    if (diffMin <= 120) {
+      const h = Math.floor(diffMin / 60);
+      const m = diffMin % 60;
+      if (h === 0) return `Starts in ${m}m`;
+      return `Starts in ${h}h${m > 0 ? ` ${m}m` : ''}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function OpenPlay() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -48,7 +103,8 @@ export function OpenPlay() {
   const [selectedSession, setSelectedSession] = useState<OpenPlaySession | null>(null);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
-  const [customerDetails, setCustomerDetails] = useState<CustomerDetails>({
+  // ✅ O14 — preserve details across reopen (in-memory only)
+  const [preservedDetails, setPreservedDetails] = useState<CustomerDetails>({
     name: '',
     email: '',
     phone: '',
@@ -62,6 +118,24 @@ export function OpenPlay() {
   const [loadingDetailsPlayers, setLoadingDetailsPlayers] = useState(false);
   const [rosterUnavailable, setRosterUnavailable] = useState(false);
 
+  // ✅ O8 — Guard auto-open so it fires once per session id
+  const autoOpenedRef = useRef<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors },
+  } = useForm<JoinForm>({
+    resolver: zodResolver(joinSchema),
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
+    defaultValues: preservedDetails,
+  });
+
+  const formValues = watch();
+
   useEffect(() => {
     loadUpcomingSessions();
   }, []);
@@ -70,15 +144,21 @@ export function OpenPlay() {
   useEffect(() => {
     const state = location.state as { selectedSessionId?: string } | null;
     const sessionId = state?.selectedSessionId;
+    if (!sessionId) return;
+    if (autoOpenedRef.current === sessionId) return;
+    if (sessions.length === 0) return;
 
-    if (sessionId && sessions.length > 0) {
-      const session = sessions.find((s) => s.id === sessionId);
-      if (!session) return;
-      if (session.status === 'full' || session.status === 'past' || session.status === 'cancelled') {
-        return;
-      }
-      handleViewDetails(session);
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+    if (
+      session.status === 'full' ||
+      session.status === 'past' ||
+      session.status === 'cancelled'
+    ) {
+      return;
     }
+    autoOpenedRef.current = sessionId;
+    handleViewDetails(session);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessions, location.state]);
 
@@ -106,6 +186,7 @@ export function OpenPlay() {
     setDetailsSession(null);
     setDetailsPlayers([]);
     setRosterUnavailable(false);
+    autoOpenedRef.current = null;
     navigate('/open-play', { replace: true, state: {} });
   };
 
@@ -114,44 +195,47 @@ export function OpenPlay() {
     setSelectedSession(session);
     setShowJoinModal(true);
     setJoinError(null);
-    setCustomerDetails({ name: '', email: '', phone: '', notes: '' });
+    // ✅ O14 — restore preserved details (in-memory)
+    reset(preservedDetails);
   };
 
+  // ✅ O13 — Atomic modal transition, no state reset race
   const handleJoinFromDetails = () => {
     if (!detailsSession) return;
     const session = detailsSession;
-    handleDetailsClose();
-    handleJoinClick(session);
+    setShowDetailsModal(false);
+    setDetailsSession(null);
+    setDetailsPlayers([]);
+    setRosterUnavailable(false);
+    setSelectedSession(session);
+    setJoinError(null);
+    setShowJoinModal(true);
+    reset(preservedDetails);
+    navigate('/open-play', { replace: true, state: {} });
   };
 
-    const handleJoinConfirm = async () => {
+  const handleJoinConfirm = async (data: JoinForm) => {
     if (!selectedSession) return;
-    if (!customerDetails.name.trim()) {
-      setJoinError('Name is required');
-      return;
-    }
-    if (!customerDetails.email.trim()) {
-      setJoinError('Email is required');
-      return;
-    }
-    if (!customerDetails.phone.trim()) {
-      setJoinError('Phone number is required');
-      return;
-    }
-
     setJoining(true);
     setJoinError(null);
+    // ✅ O14 — remember what they typed so reopening keeps it
+    setPreservedDetails({
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      notes: data.notes ?? '',
+    });
 
     try {
-      const booking = await openPlayService.joinSession(selectedSession.id, customerDetails);
+      const booking = await openPlayService.joinSession(selectedSession.id, data);
 
       const store = useBookingStore.getState();
       store.reset();
       useBookingStore.setState({ currentBooking: booking });
 
       setShowJoinModal(false);
+      setPreservedDetails({ name: '', email: '', phone: '', notes: '' });
 
-      // ✅ Free sessions skip checkout entirely
       if (booking.status === 'confirmed' && booking.total_amount === 0) {
         navigate('/success');
       } else {
@@ -165,9 +249,27 @@ export function OpenPlay() {
   };
 
   const handleModalClose = () => {
+    // ✅ O7 — confirm if fields have content
+    const hasInput =
+      formValues.name?.trim() ||
+      formValues.email?.trim() ||
+      formValues.phone?.trim() ||
+      formValues.notes?.trim();
+    if (hasInput) {
+      if (!window.confirm('Discard your details?')) return;
+    }
     setShowJoinModal(false);
     setSelectedSession(null);
+    setJoinError(null);
     navigate('/open-play', { replace: true, state: {} });
+  };
+
+  // ✅ O5 — waitlist stub
+  const handleWaitlist = (session: OpenPlaySession) => {
+    // TODO: wire to backend when /open-play/waitlist endpoint exists
+    window.alert(
+      `We'll notify you if a spot opens in "${session.title || 'this session'}". (Coming soon)`
+    );
   };
 
   return (
@@ -215,27 +317,26 @@ export function OpenPlay() {
             {sessions.map((session, i) => {
               const isFull = session.status === 'full';
               const status = STATUS_BADGE[session.status] ?? STATUS_BADGE.upcoming;
+              // ✅ O10 — derive spots from counts, not API value
+              const spotsLeft = Math.max(
+                0,
+                session.max_players - session.current_players
+              );
+              const imminence = getImminenceLabel(session);
+              const isFree = session.price_per_player === 0;
+
               return (
-                <motion.div
+                <motion.article
                   key={session.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  onClick={() => handleViewDetails(session)}
-                  className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl transition-all hover:border-brand-blue-400/60 hover:shadow-glow-blue cursor-pointer flex flex-col justify-between"
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleViewDetails(session);
-                    }
-                  }}
+                  className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl transition-all hover:border-brand-blue-400/60 hover:shadow-glow-blue flex flex-col justify-between"
                 >
                   <div>
                     <div className="mb-3 flex items-center justify-between gap-2">
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${status.className}`}>
-                        {status.label}
+                        {imminence ?? status.label}
                       </span>
                       <span
                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
@@ -262,11 +363,10 @@ export function OpenPlay() {
                       <div className="flex items-center gap-2">
                         <Users className="h-3.5 w-3.5 text-brand-blue-300" />
                         <span>
-                          {session.current_players}/{session.max_players} players ·{' '}
-                          {session.spots_left} spot{session.spots_left === 1 ? '' : 's'} left
+                          {session.current_players}/{session.max_players} players · {spotsLeft}{' '}
+                          spot{spotsLeft === 1 ? '' : 's'} left
                         </span>
                       </div>
-                      {/* ✅ Multi-court display */}
                       <div className="flex items-start gap-2">
                         <UserCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-brand-blue-300" />
                         <div className="flex flex-wrap gap-1">
@@ -295,37 +395,50 @@ export function OpenPlay() {
 
                   <div className="mt-5 flex items-center justify-between border-t border-forest-700/80 pt-3.5">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-cream-muted font-semibold">Per player</p>
+                      <p className="text-[10px] uppercase tracking-wider text-cream-muted font-semibold">
+                        Per player
+                      </p>
                       <p className="font-display text-lg font-extrabold text-brand-blue-300">
-                        {session.price_per_player === 0 ? 'Free' : formatCurrency(session.price_per_player)}
+                        {isFree ? 'Free' : formatCurrency(session.price_per_player)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleViewDetails(session);
-                        }}
+                        onClick={() => handleViewDetails(session)}
                         leftIcon={<Eye className="h-3.5 w-3.5" />}
                       >
                         View
                       </Button>
-                      <Button
-                        size="sm"
-                        disabled={isFull}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleJoinClick(session);
-                        }}
-                        rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
-                      >
-                        {isFull ? 'Full' : 'Join'}
-                      </Button>
+                      {isFull ? (
+                        // ✅ O5 — Waitlist stub
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => handleWaitlist(session)}
+                          leftIcon={<Bell className="h-3.5 w-3.5" />}
+                        >
+                          Notify Me
+                        </Button>
+                      ) : (
+                        // ✅ O6 — Free sessions use green
+                        <Button
+                          size="sm"
+                          className={
+                            isFree
+                              ? 'bg-accentGreen-500 text-charcoal hover:bg-accentGreen-400'
+                              : undefined
+                          }
+                          onClick={() => handleJoinClick(session)}
+                          rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+                        >
+                          {isFree ? 'Join Free' : 'Join'}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </motion.div>
+                </motion.article>
               );
             })}
           </div>
@@ -341,7 +454,6 @@ export function OpenPlay() {
       >
         {detailsSession && (
           <div className="space-y-4">
-            {/* Header badges + title */}
             <div>
               <div className="mb-2.5 flex flex-wrap items-center gap-2">
                 <span
@@ -364,7 +476,6 @@ export function OpenPlay() {
               </h3>
             </div>
 
-            {/* Meta */}
             <div className="space-y-2 rounded-xl border border-forest-700/80 bg-forest-950/70 p-3.5 text-xs text-cream-muted">
               <div className="flex items-center gap-2.5">
                 <CalendarDays className="h-4 w-4 text-brand-blue-300" />
@@ -374,7 +485,6 @@ export function OpenPlay() {
                 <Clock className="h-4 w-4 text-brand-blue-300" />
                 <span>{formatTimeRange(detailsSession.start_time, detailsSession.end_time)}</span>
               </div>
-              {/* ✅ Multi-court display */}
               <div className="flex items-start gap-2.5">
                 <UserCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-blue-300" />
                 <div className="flex flex-wrap gap-1.5">
@@ -394,7 +504,6 @@ export function OpenPlay() {
               </div>
             </div>
 
-            {/* Description */}
             {detailsSession.description && (
               <div>
                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-brand-blue-300">
@@ -406,13 +515,11 @@ export function OpenPlay() {
               </div>
             )}
 
-            {/* Roster */}
             <div>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-brand-blue-300">
                 Players ({detailsSession.current_players}/{detailsSession.max_players})
               </p>
 
-              {/* Progress bar */}
               <div className="mb-3 h-2 w-full overflow-hidden rounded-full bg-forest-800 border border-forest-700/80">
                 <div
                   className="h-full bg-brand-blue-400 transition-all duration-300"
@@ -430,15 +537,19 @@ export function OpenPlay() {
                   <LoadingSpinner className="py-2" />
                 </div>
               ) : rosterUnavailable ? (
+                // ✅ O11 — Distinct copy for privacy vs empty
                 <p className="text-xs text-cream-muted">
-                  {detailsSession.current_players} player
+                  Player list is private. {detailsSession.current_players} player
                   {detailsSession.current_players === 1 ? '' : 's'} joined ·{' '}
-                  {detailsSession.spots_left} spot
-                  {detailsSession.spots_left === 1 ? '' : 's'} left
+                  {Math.max(0, detailsSession.max_players - detailsSession.current_players)} spot
+                  {Math.max(0, detailsSession.max_players - detailsSession.current_players) === 1
+                    ? ''
+                    : 's'}{' '}
+                  left.
                 </p>
               ) : detailsPlayers.length === 0 ? (
                 <p className="text-xs text-cream-muted">
-                  No one has joined yet — be the first!
+                  Be the first to join — no one's on the list yet!
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-1.5">
@@ -450,22 +561,36 @@ export function OpenPlay() {
                       {player.display_name}
                     </span>
                   ))}
-                  {detailsSession.spots_left > 0 && (
+                  {Math.max(0, detailsSession.max_players - detailsSession.current_players) > 0 && (
                     <span className="rounded-lg border border-dashed border-forest-600 px-2.5 py-1 text-[11px] text-cream-muted">
-                      +{detailsSession.spots_left} spot
-                      {detailsSession.spots_left === 1 ? '' : 's'} open
+                      +
+                      {Math.max(
+                        0,
+                        detailsSession.max_players - detailsSession.current_players
+                      )}{' '}
+                      spot
+                      {Math.max(
+                        0,
+                        detailsSession.max_players - detailsSession.current_players
+                      ) === 1
+                        ? ''
+                        : 's'}{' '}
+                      open
                     </span>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Price + CTA */}
             <div className="flex items-center justify-between rounded-xl border border-brand-blue-500/40 bg-brand-blue-500/15 p-3.5">
-                            <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-cream-muted">Price per player</p>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-cream-muted">
+                  Price per player
+                </p>
                 <p className="font-display text-xl font-extrabold text-brand-blue-300">
-                  {detailsSession.price_per_player === 0 ? 'Free' : formatCurrency(detailsSession.price_per_player)}
+                  {detailsSession.price_per_player === 0
+                    ? 'Free'
+                    : formatCurrency(detailsSession.price_per_player)}
                 </p>
               </div>
               <Button
@@ -489,13 +614,11 @@ export function OpenPlay() {
         size="md"
       >
         {selectedSession && (
-          <div className="space-y-4">
-            {/* Session Summary */}
+          <form onSubmit={handleSubmit(handleJoinConfirm)} className="space-y-4">
             <div className="rounded-xl border border-forest-700/80 bg-forest-950/70 p-3.5">
               <p className="text-sm font-bold text-cream">
                 {selectedSession.title || selectedSession.host_name || 'Open Play Session'}
               </p>
-              {/* ✅ Multi-court display */}
               <div className="mt-0.5 flex flex-wrap gap-1">
                 {selectedSession.courts && selectedSession.courts.length > 0 ? (
                   selectedSession.courts.map((c) => (
@@ -514,7 +637,7 @@ export function OpenPlay() {
                 {formatDateLong(selectedSession.date)} ·{' '}
                 {formatTimeRange(selectedSession.start_time, selectedSession.end_time)}
               </p>
-                           <p className="mt-1 text-xs font-semibold text-brand-blue-300">
+              <p className="mt-1 text-xs font-semibold text-brand-blue-300">
                 {selectedSession.current_players}/{selectedSession.max_players} players ·{' '}
                 {selectedSession.price_per_player === 0
                   ? 'Free'
@@ -522,44 +645,57 @@ export function OpenPlay() {
               </p>
             </div>
 
+            {/* ✅ O3 — explicit outcome message */}
+            <div className="rounded-xl border border-brand-blue-500/30 bg-brand-blue-500/10 p-3 text-xs text-cream-muted">
+              {selectedSession.price_per_player === 0 ? (
+                <>You'll be added to the roster immediately — no payment needed.</>
+              ) : (
+                <>
+                  You'll be taken to checkout to pay{' '}
+                  <strong className="text-brand-blue-200">
+                    {formatCurrency(selectedSession.price_per_player)}
+                  </strong>{' '}
+                  and confirm your spot.
+                </>
+              )}
+            </div>
+
             <Input
+              id="name"
               label="Full Name"
               required
               placeholder="Enter your full name"
-              value={customerDetails.name}
-              onChange={(e) =>
-                setCustomerDetails({ ...customerDetails, name: e.target.value })
-              }
+              error={errors.name?.message}
+              {...register('name')}
             />
 
             <Input
+              id="email"
               label="Email Address"
               required
               type="email"
               placeholder="you@email.com"
-              value={customerDetails.email}
-              onChange={(e) =>
-                setCustomerDetails({ ...customerDetails, email: e.target.value })
-              }
+              error={errors.email?.message}
+              {...register('email')}
             />
 
             <Input
+              id="phone"
               label="Phone Number"
               required
+              type="tel"
+              inputMode="numeric"
               placeholder="0917 123 4567"
-              value={customerDetails.phone}
-              onChange={(e) =>
-                setCustomerDetails({ ...customerDetails, phone: e.target.value })
-              }
+              error={errors.phone?.message}
+              {...register('phone')}
             />
 
             <Input
+              id="notes"
               label="Notes (optional)"
               placeholder="Any special requests or paddle rental?"
-              value={customerDetails.notes || ''}
-              onChange={(e) =>
-                setCustomerDetails({ ...customerDetails, notes: e.target.value })
-              }
+              error={errors.notes?.message}
+              {...register('notes')}
             />
 
             {joinError && (
@@ -569,14 +705,20 @@ export function OpenPlay() {
             )}
 
             <div className="flex flex-col gap-2.5 pt-2 sm:flex-row sm:gap-3">
-               <Button fullWidth isLoading={joining} onClick={handleJoinConfirm}>
+              <Button type="submit" fullWidth isLoading={joining}>
                 {selectedSession.price_per_player === 0 ? 'Confirm & Join' : 'Confirm & Pay'}
               </Button>
-              <Button variant="ghost" fullWidth className="sm:w-auto" onClick={handleModalClose}>
+              <Button
+                type="button"
+                variant="ghost"
+                fullWidth
+                className="sm:w-auto"
+                onClick={handleModalClose}
+              >
                 Cancel
               </Button>
             </div>
-          </div>
+          </form>
         )}
       </Modal>
 

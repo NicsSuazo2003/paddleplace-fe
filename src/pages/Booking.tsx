@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -13,6 +13,8 @@ import {
   User,
   Mail,
   Phone,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -20,9 +22,9 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBookingStore, getSelectedSlotItems, getSelectedTotal } from '@/stores/bookingStore';
-import { formatTimeRange, formatCurrency, formatDateLong } from '@/utils/format';
-import { FIXED_SLOT } from '@/utils/constants';
-import type { CustomerDetails } from '@/types';
+import { formatTimeRange, formatCurrency, formatDateLong, formatCountdown } from '@/utils/format';
+import { FIXED_SLOT, APP_CONFIG } from '@/utils/constants';
+import type { Court, TimeSlot, CustomerDetails } from '@/types';
 
 // Normalize PH mobile: strip spaces/dashes/parens, convert +63/63 → 0
 const normalizePhone = (value: string) =>
@@ -60,33 +62,44 @@ const customerSchema = z.object({
 
 type CustomerForm = z.infer<typeof customerSchema>;
 
+const HOLD_MINUTES = Math.max(1, Math.round(APP_CONFIG.paymentTimerSeconds / 60));
+
 export function Booking() {
   const navigate = useNavigate();
   const formRef = useRef<HTMLDivElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
 
-  const {
-    courts,
-    selectedDate,
-    loadingCourts,
-    error,
-    loadCourts,
-    setCustomer,
-    createBooking,
-    slots,
-  } = useBookingStore();
+  // ✅ Selector-based subscriptions (avoid re-render on unrelated state)
+  const courts = useBookingStore((s) => s.courts);
+  const selectedDate = useBookingStore((s) => s.selectedDate);
+  const slots = useBookingStore((s) => s.slots);
+  const selectedSlotIds = useBookingStore((s) => s.selectedSlotIds);
+  const loadingCourts = useBookingStore((s) => s.loadingCourts);
+  const error = useBookingStore((s) => s.error);
+  const loadCourts = useBookingStore((s) => s.loadCourts);
+  const setCustomer = useBookingStore((s) => s.setCustomer);
+  const createBooking = useBookingStore((s) => s.createBooking);
+  const removeSlot = useBookingStore((s) => s.removeSlot);
+  const customer = useBookingStore((s) => s.customer);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showErrorSummary, setShowErrorSummary] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
-    mode: 'onBlur',
+    // ✅ Softer UX: validate on blur, then re-validate on change
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
     defaultValues: useBookingStore.getState().customer,
   });
+
+  const notesValue = watch('notes') ?? '';
 
   useEffect(() => {
     if (courts.length === 0) {
@@ -94,7 +107,10 @@ export function Booking() {
     }
   }, [courts.length, loadCourts]);
 
+  // ✅ Only auto-scroll on small screens where summary + form aren't both visible
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(min-width: 1024px)').matches) return;
     if (formRef.current) {
       setTimeout(() => {
         formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -102,33 +118,49 @@ export function Booking() {
     }
   }, []);
 
-  const storeState = useBookingStore();
-  const selectedSlots = getSelectedSlotItems(storeState);
-  const total = getSelectedTotal(storeState);
+  // ✅ Derived values via useMemo
+  const selectedSlots = useMemo(() => {
+    const state = useBookingStore.getState();
+    return getSelectedSlotItems(state);
+  }, [selectedSlotIds, slots]);
 
-  const getSelectedCourts = () => {
-    const courtMap = new Map();
-    const selectedTimeSlots = slots.filter((s) => storeState.selectedSlotIds.includes(s.id));
-    selectedTimeSlots.forEach((slot) => {
-      const court = courts.find((c) => c.id === slot.court_id);
-      if (court && !courtMap.has(court.id)) {
-        courtMap.set(court.id, court);
-      }
-    });
-    return Array.from(courtMap.values());
-  };
+  const total = useMemo(() => {
+    const state = useBookingStore.getState();
+    return getSelectedTotal(state);
+  }, [selectedSlotIds, slots]);
 
-  const selectedCourts = getSelectedCourts();
+  const selectedCourts = useMemo<Court[]>(() => {
+    const map = new Map<string, Court>();
+    slots
+      .filter((s) => selectedSlotIds.includes(s.id))
+      .forEach((slot) => {
+        const court = courts.find((c) => c.id === slot.court_id);
+        if (court && !map.has(court.id)) map.set(court.id, court);
+      });
+    return Array.from(map.values());
+  }, [slots, selectedSlotIds, courts]);
+
+  const courtById = useMemo(() => {
+    const map = new Map<string, Court>();
+    courts.forEach((c) => map.set(c.id, c));
+    return map;
+  }, [courts]);
+
+  const slotById = useMemo(() => {
+    const map = new Map<string, TimeSlot>();
+    slots.forEach((s) => map.set(s.id, s));
+    return map;
+  }, [slots]);
 
   const getCourtForSlot = (slotId: string) => {
-    const timeSlot = slots.find((s) => s.id === slotId);
-    if (!timeSlot) return null;
-    return courts.find((c) => c.id === timeSlot.court_id);
+    const ts = slotById.get(slotId);
+    return ts ? courtById.get(ts.court_id) ?? null : null;
   };
 
   const onSubmit = async (data: CustomerForm) => {
     setSubmitting(true);
     setSubmitError(null);
+    setShowErrorSummary(false);
     try {
       setCustomer(data);
       await createBooking();
@@ -146,9 +178,27 @@ export function Booking() {
     }
   };
 
-  const handleSummaryButtonClick = () => {
-    handleSubmit(onSubmit)();
+  // ✅ Scroll to first invalid field on submit failure
+  const onInvalid = (formErrors: typeof errors) => {
+    setShowErrorSummary(true);
+    const order: (keyof CustomerForm)[] = ['name', 'phone', 'email', 'notes'];
+    const first = order.find((k) => formErrors[k]);
+    if (first) {
+      const el = document.getElementById(first);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (el as HTMLInputElement | null)?.focus?.();
+    }
   };
+
+  const handleSummaryButtonClick = () => {
+    setShowErrorSummary(true);
+    handleSubmit(onSubmit, onInvalid)();
+  };
+
+  const errorCount = Object.keys(errors).length;
+
+  // ✅ Stale-selection guard
+  const hasStaleSelection = selectedSlotIds.length > 0 && selectedSlots.length === 0;
 
   if (loadingCourts && courts.length === 0) {
     return (
@@ -160,7 +210,7 @@ export function Booking() {
     );
   }
 
-  if (selectedSlots.length === 0) {
+  if (selectedSlots.length === 0 && !hasStaleSelection) {
     return (
       <div className="min-h-screen bg-charcoal">
         <Navbar />
@@ -185,7 +235,7 @@ export function Booking() {
     <div className="min-h-screen bg-charcoal text-cream">
       <Navbar />
 
-      <div className="container-page pt-24 pb-28 lg:pb-16">
+      <div className="container-page pt-24 pb-36 lg:pb-16">
         <div className="mb-5 sm:mb-6">
           <h1 className="text-2xl font-bold tracking-tight text-cream sm:text-3xl">Confirm & Book</h1>
           <p className="text-xs text-cream-muted sm:text-sm">
@@ -199,18 +249,57 @@ export function Booking() {
           </div>
         )}
 
+        {/* ✅ Stale selection warning */}
+        {hasStaleSelection && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+            <div>
+              <p className="font-semibold text-amber-100">We lost track of your slot details.</p>
+              <p className="mt-0.5 text-amber-200/80">
+                Your slot prices and times couldn't be loaded. Please reselect your slots.
+              </p>
+              <Link
+                to="/"
+                className="mt-2 inline-flex items-center gap-1 font-semibold text-amber-100 underline"
+              >
+                Back to court selection
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ Error summary banner */}
+        {showErrorSummary && errorCount > 0 && (
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-error/40 bg-error/10 p-3 text-xs text-error">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold">
+                Please fix {errorCount} {errorCount === 1 ? 'field' : 'fields'} below.
+              </p>
+              <ul className="mt-1 list-inside list-disc space-y-0.5">
+                {errors.name?.message && <li>{errors.name.message}</li>}
+                {errors.phone?.message && <li>{errors.phone.message}</li>}
+                {errors.email?.message && <li>{errors.email.message}</li>}
+                {errors.notes?.message && <li>{errors.notes.message}</li>}
+              </ul>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-5 md:gap-6 lg:grid-cols-3">
           <div className="space-y-5 lg:col-span-2">
             {/* Selection Summary */}
             <div className="card rounded-2xl border border-forest-700/70 bg-forest-900/80 p-4 sm:p-5 shadow-xl backdrop-blur-sm">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-blue-300">
                   <CalendarDays className="h-3.5 w-3.5 text-brand-blue-300" />
                   Your Selection ({selectedCourts.length} court{selectedCourts.length > 1 ? 's' : ''})
                 </h2>
+                {/* ✅ Promoted edit chip */}
                 <Link
-                  to="/"
-                  className="flex items-center gap-1 text-[11px] font-semibold text-cream-muted underline decoration-dotted transition hover:text-brand-blue-300"
+                  to="/#booking"
+                  className="inline-flex items-center gap-1 rounded-lg border border-brand-blue-500/40 bg-brand-blue-500/10 px-2.5 py-1 text-[11px] font-bold text-brand-blue-300 transition hover:bg-brand-blue-500/20"
                 >
                   <Pencil className="h-3 w-3" />
                   Edit selection
@@ -225,8 +314,8 @@ export function Booking() {
               <div className="space-y-2.5">
                 {selectedCourts.map((court) => {
                   const courtSlots = selectedSlots.filter((s) => {
-                    const timeSlot = slots.find((t) => t.id === s.slot_id);
-                    return timeSlot?.court_id === court.id;
+                    const ts = slotById.get(s.slot_id);
+                    return ts?.court_id === court.id;
                   });
                   return (
                     <div
@@ -237,6 +326,9 @@ export function Booking() {
                         <img
                           src={court.image}
                           alt={court.name}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                           className="h-full w-full object-cover"
                         />
                       </div>
@@ -261,29 +353,51 @@ export function Booking() {
                 })}
               </div>
 
-              {/* Slot Row Pills */}
-              <div className="mt-3.5 space-y-2">
-                {selectedSlots.map((slot) => {
-                  const court = getCourtForSlot(slot.slot_id);
+              {/* Slot Row Pills — grouped by court, each removable */}
+              <div className="mt-3.5 space-y-3">
+                {selectedCourts.map((court) => {
+                  const courtSlots = selectedSlots.filter((s) => {
+                    const ts = slotById.get(s.slot_id);
+                    return ts?.court_id === court.id;
+                  });
+                  if (courtSlots.length === 0) return null;
                   return (
-                    <div
-                      key={slot.slot_id}
-                      className="flex items-center justify-between rounded-xl border border-forest-700/60 bg-forest-800/80 px-3.5 py-2.5"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 text-brand-blue-300" />
-                        <span className="text-xs font-medium text-cream sm:text-sm">
-                          {court?.name || 'Court'} · {formatTimeRange(slot.start_time, slot.end_time)}
-                        </span>
-                        {slot.type === 'fixed_2hr' && (
-                          <span className="rounded-full bg-brand-blue-500/30 border border-brand-blue-400/40 px-2 py-0.5 text-[9px] font-bold text-brand-blue-200">
-                            {FIXED_SLOT.label}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-xs font-bold text-brand-blue-300 sm:text-sm">
-                        {formatCurrency(slot.price)}
-                      </span>
+                    <div key={court.id} className="space-y-1.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-cream-muted">
+                        {court.name}
+                      </p>
+                      {courtSlots.map((slot) => (
+                        <div
+                          key={slot.slot_id}
+                          className="flex items-center justify-between gap-2 rounded-xl border border-forest-700/60 bg-forest-800/80 px-3.5 py-2.5"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <Clock className="h-3.5 w-3.5 shrink-0 text-brand-blue-300" />
+                            <span className="truncate text-xs font-medium text-cream sm:text-sm">
+                              {formatTimeRange(slot.start_time, slot.end_time)}
+                            </span>
+                            {slot.type === 'fixed_2hr' && (
+                              <span className="shrink-0 rounded-full bg-brand-blue-500/30 border border-brand-blue-400/40 px-2 py-0.5 text-[9px] font-bold text-brand-blue-200">
+                                {FIXED_SLOT.label}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-xs font-bold text-brand-blue-300 sm:text-sm">
+                              {formatCurrency(slot.price)}
+                            </span>
+                            {/* ✅ Per-slot remove */}
+                            <button
+                              type="button"
+                              onClick={() => removeSlot(slot.slot_id)}
+                              title="Remove slot"
+                              className="rounded-lg border border-forest-700 bg-forest-900 p-1 text-cream-muted transition hover:border-error/60 hover:text-error"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   );
                 })}
@@ -307,7 +421,7 @@ export function Booking() {
               <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-brand-blue-300">
                 Your Details
               </h2>
-              <form id="bookingForm" onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+              <form id="bookingForm" onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-3.5">
                 <div className="grid gap-3.5 sm:grid-cols-2">
                   <Input
                     id="name"
@@ -338,12 +452,19 @@ export function Booking() {
                   error={errors.email?.message}
                   {...register('email')}
                 />
-                <Textarea
-                  label="Notes (optional)"
-                  rows={2}
-                  placeholder="Any special requests or equipment rental notes..."
-                  {...register('notes')}
-                />
+                <div>
+                  <Textarea
+                    id="notes"
+                    label="Notes (optional)"
+                    rows={2}
+                    placeholder="Any special requests or equipment rental notes..."
+                    {...register('notes')}
+                  />
+                  {/* ✅ Char counter */}
+                  <p className="mt-1 text-right text-[11px] text-cream-muted">
+                    {notesValue.length} / 500
+                  </p>
+                </div>
 
                 {submitError && (
                   <p className="rounded-xl border border-error/30 bg-error/10 p-2.5 text-xs font-medium text-error">
@@ -362,11 +483,12 @@ export function Booking() {
                   Booking Summary
                 </h2>
 
+                {/* ✅ Court cards with subtotals only (no duplicate slot list) */}
                 <div className="mb-3.5 space-y-2">
                   {selectedCourts.map((court) => {
                     const courtSlots = selectedSlots.filter((s) => {
-                      const timeSlot = slots.find((t) => t.id === s.slot_id);
-                      return timeSlot?.court_id === court.id;
+                      const ts = slotById.get(s.slot_id);
+                      return ts?.court_id === court.id;
                     });
                     return (
                       <div
@@ -387,6 +509,7 @@ export function Booking() {
                   })}
                 </div>
 
+                {/* ✅ Compact slot list (no per-court duplication header) */}
                 <AnimatePresence mode="popLayout">
                   <motion.div
                     key="slots"
@@ -446,8 +569,8 @@ export function Booking() {
               <div className="rounded-xl border border-forest-700/70 bg-forest-900/60 p-3.5">
                 <p className="text-xs text-cream-muted leading-relaxed">
                   <span className="font-semibold text-brand-blue-300">Note:</span> Court slots are
-                  temporarily reserved once you proceed to checkout. Complete payment within 15 minutes
-                  to secure your schedule.
+                  temporarily reserved once you proceed to checkout. Complete payment within{' '}
+                  {HOLD_MINUTES} minutes to secure your schedule.
                 </p>
               </div>
             </div>
@@ -455,12 +578,18 @@ export function Booking() {
         </div>
       </div>
 
-      {/* Sticky Mobile Checkout Bar */}
+      {/* ✅ Sticky Mobile Checkout Bar — hold timer + validation feedback */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-forest-700/80 bg-forest-950/95 p-3.5 backdrop-blur-md lg:hidden">
+        {showErrorSummary && errorCount > 0 && (
+          <p className="mb-2 flex items-center gap-1.5 rounded-lg border border-error/40 bg-error/10 p-2 text-[11px] font-semibold text-error">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            Please fix {errorCount} {errorCount === 1 ? 'field' : 'fields'} above.
+          </p>
+        )}
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-[10px] uppercase font-semibold tracking-wider text-cream-muted">
-              {selectedSlots.length} slot{selectedSlots.length > 1 ? 's' : ''} selected
+              {selectedSlots.length} slot{selectedSlots.length > 1 ? 's' : ''} · held {HOLD_MINUTES} min after checkout
             </p>
             <p className="text-xl font-extrabold text-brand-blue-300">{formatCurrency(total)}</p>
           </div>

@@ -18,7 +18,7 @@ interface BookingStoreState {
   loadingSlots: boolean;
   error: string | null;
 
-  // ✅ NEW: UI mode for the booking grid (private court vs open play)
+  // ✅ UI mode for the booking grid (private court vs open play)
   bookingMode: BookingMode;
   setBookingMode: (mode: BookingMode) => void;
 
@@ -28,6 +28,7 @@ interface BookingStoreState {
   loadSlots: () => Promise<void>;
   loadAllCourtsSlots: () => Promise<void>;
   toggleSlot: (slotId: string) => void;
+  removeSlot: (slotId: string) => void;
   clearSlots: () => void;
   clearSelection: () => void;
   setCustomer: (customer: Partial<CustomerDetails>) => void;
@@ -55,7 +56,7 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
   loadingSlots: false,
   error: null,
 
-  // ✅ NEW: default to private court booking
+  // ✅ Default to private court booking
   bookingMode: 'private',
   setBookingMode: (mode) => set({ bookingMode: mode }),
 
@@ -156,7 +157,7 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
     }
   },
 
-  // ✅ REFACTORED: pure immutable updates — no direct state mutation
+  // ✅ Pure immutable updates — no direct state mutation
   toggleSlot: (slotId) => {
     set((state) => {
       const slot = state.slots.find((s) => s.id === slotId);
@@ -200,9 +201,15 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
     });
   },
 
+  // ✅ Remove a single slot from the current selection (used by Booking page "×" buttons)
+  removeSlot: (slotId) =>
+    set((state) => ({
+      selectedSlotIds: state.selectedSlotIds.filter((id) => id !== slotId),
+    })),
+
   clearSlots: () => set({ selectedSlotIds: [] }),
 
-  // ✅ NEW: alias — clearer intent name for UI components
+  // ✅ Alias — clearer intent name for UI components
   clearSelection: () => get().clearSlots(),
 
   setCustomer: (customerData) =>

@@ -158,6 +158,9 @@ export interface ClientSettings {
   gcash_number?: string | null;
   gcash_account_name?: string | null;
   payment_methods?: PaymentMethod[];
+  contact_phone?: string | null;
+contact_email?: string | null;
+contact_viber?: string | null;
 }
 
 export type AdminView = 'calendar' | 'list';
