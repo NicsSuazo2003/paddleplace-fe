@@ -345,11 +345,11 @@ export function Checkout() {
                   <div className="mt-2 flex items-start gap-2 rounded-lg border border-brand-blue-500/30 bg-brand-blue-500/10 p-2.5">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-brand-blue-300" />
                     <p className="text-[11px] text-cream-muted leading-relaxed">
-                      <strong className="text-brand-blue-200">Transparency notice:</strong>{' '}
-                      CenterCourt uses <strong className="text-cream">{methodName}</strong> as one
-                      of our official payment methods. The account details shown below are
-                      verified and belong to our business. If anything looks different, please
-                      contact us before sending any money.
+                     <strong className="text-brand-blue-200">Transparency notice:</strong>{' '}
+Paddle Place uses <strong className="text-cream">{methodName}</strong> as one
+of our official payment methods. The account details shown below are
+verified and belong to our business. If anything looks different, please
+contact us before sending any money.
                     </p>
                   </div>
                 </div>

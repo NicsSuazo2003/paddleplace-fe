@@ -27,8 +27,8 @@ const BLANK_COURT: Court = {
   dimensions: '44ft x 20ft',
   images: [],
   rating: 4.8,
-  type: 'indoor',
-  is_indoor: true,
+  type: 'outdoor',
+  is_indoor: false,
   is_active: true,
   status: 'active',
 };
@@ -156,13 +156,13 @@ export function Courts() {
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
                             court?.is_active
-                              ? 'border border-accentGreen-400/40 bg-accentGreen-500/20 text-accentGreen-300'
+                              ? 'border border-mint-400/40 bg-mint-500/20 text-mint-300'
                               : 'border border-red-500/40 bg-red-500/20 text-red-400'
                           }`}
                         >
                           <span
                             className={`h-1.5 w-1.5 rounded-full ${
-                              court?.is_active ? 'bg-accentGreen-400' : 'bg-red-400'
+                              court?.is_active ? 'bg-mint-400' : 'bg-red-400'
                             }`}
                           />
                           {court?.is_active ? 'Active' : 'Inactive'}

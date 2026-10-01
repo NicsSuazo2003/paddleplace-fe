@@ -3,15 +3,15 @@ import { Link } from 'react-router-dom';
 interface LogoProps {
   size?: 'sm' | 'md' | 'nav' | 'lg' | 'xl' | '2xl';
   withText?: boolean;
-  withImage?: boolean; // ← new
+  withImage?: boolean;
   to?: string;
-  variant?: 'light' | 'dark'; // 'light' for dark headers/footers, 'dark' for bright backgrounds
+  variant?: 'light' | 'dark';
 }
 
 export function Logo({
   size = 'md',
   withText = true,
-  withImage = true, // ← new
+  withImage = false,
   to = '/',
   variant = 'light',
 }: LogoProps) {
@@ -39,11 +39,9 @@ export function Logo({
       {withText && (
         <div className="flex flex-col leading-none">
           <span className={`font-display ${s.text} font-black tracking-tight`}>
-            {/* Matches brand deep teal on light backgrounds, crisp white on dark navbars/footers */}
             <span className={variant === 'light' ? 'text-white' : 'text-[#0E4348]'}>
               Paddle{' '}
             </span>
-            {/* Pale Mint / Seafoam accent matching the court border */}
             <span className={variant === 'light' ? 'text-[#B6DAC8]' : 'text-[#2D534B]'}>
               Place
             </span>

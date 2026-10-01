@@ -40,10 +40,6 @@ import type { ClientSettings, PaymentMethod } from '@/types';
 import { StaffManagement } from '@/components/ui/StaffManagement';
 import { Modal } from '@/components/ui/Modal';
 
-// ─────────────────────────────────────────────────────────────
-// Payment method type options
-// ─────────────────────────────────────────────────────────────
-
 const PAYMENT_TYPE_OPTIONS = [
   { value: 'gcash', label: 'GCash', icon: '📱' },
   { value: 'qr_ph', label: 'QR Ph (Bank QR)', icon: '📷' },
@@ -51,10 +47,6 @@ const PAYMENT_TYPE_OPTIONS = [
   { value: 'e_wallet', label: 'E-Wallet', icon: '💳' },
   { value: 'other', label: 'Other', icon: '🔗' },
 ];
-
-// ─────────────────────────────────────────────────────────────
-// Icon options
-// ─────────────────────────────────────────────────────────────
 
 const ICON_OPTIONS = [
   { value: 'Smartphone', icon: Smartphone },
@@ -64,10 +56,6 @@ const ICON_OPTIONS = [
   { value: 'Wallet', icon: Wallet },
   { value: 'Building2', icon: Building2 },
 ];
-
-// ─────────────────────────────────────────────────────────────
-// Settings Component
-// ─────────────────────────────────────────────────────────────
 
 export function Settings() {
   const { user } = useAuthStore();
@@ -82,10 +70,6 @@ export function Settings() {
   const removeBlockedDate = useAdminStore((state) => state.removeBlockedDate);
 
   const { updateProfile, changePassword } = useAuthStore();
-
-  // ───────────────────────────────────────────────────────────
-  // Profile state
-  // ───────────────────────────────────────────────────────────
 
   const [selectedCourtId, setSelectedCourtId] = useState<string>('');
   const [blockDate, setBlockDate] = useState(toISODate(addDays(new Date(), 7)));
@@ -104,10 +88,6 @@ export function Settings() {
     text: string;
   } | null>(null);
 
-  // ───────────────────────────────────────────────────────────
-  // Password state
-  // ───────────────────────────────────────────────────────────
-
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -117,10 +97,6 @@ export function Settings() {
     type: 'success' | 'error';
     text: string;
   } | null>(null);
-
-  // ───────────────────────────────────────────────────────────
-  // Payment Methods State
-  // ───────────────────────────────────────────────────────────
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(true);
@@ -133,15 +109,7 @@ export function Settings() {
     text: string;
   } | null>(null);
 
-  // ───────────────────────────────────────────────────────────
-  // QR Upload state
-  // ───────────────────────────────────────────────────────────
-
   const [uploadingQR, setUploadingQR] = useState(false);
-
-  // ───────────────────────────────────────────────────────────
-  // Form Data
-  // ───────────────────────────────────────────────────────────
 
   const [formData, setFormData] = useState<Partial<PaymentMethod>>({
     name: '',
@@ -210,7 +178,7 @@ export function Settings() {
             icon: 'Smartphone',
             enabled: true,
             config: {
-              account_name: APP_CONFIG.gcashAccountName || 'CenterCourt Tandag',
+              account_name: APP_CONFIG.gcashAccountName || 'Paddle Place',
               account_number: APP_CONFIG.gcashNumber || '09XX XXX XXXX',
             },
             sort_order: 0,
@@ -245,21 +213,21 @@ export function Settings() {
       const token = localStorage.getItem('admin_token');
 
       const baseUrl =
-  import.meta.env.VITE_API_BASE_URL ?? APP_CONFIG.apiUrl;
+        import.meta.env.VITE_API_BASE_URL ?? APP_CONFIG.apiUrl;
 
-const response = await fetch(`${baseUrl}/api/files/upload`, {
-  method: 'POST',
-  headers: {
-    'X-Client-Subdomain':
-      import.meta.env.VITE_CLIENT_SUBDOMAIN ?? 'paddleplace',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  },
-  body: uploadData,
-});
+      const response = await fetch(`${baseUrl}/api/files/upload`, {
+        method: 'POST',
+        headers: {
+          'X-Client-Subdomain':
+            import.meta.env.VITE_CLIENT_SUBDOMAIN ?? 'paddleplace',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: uploadData,
+      });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Upload failed');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Upload failed: ${response.status}`);
       }
 
       const data = await response.json();
@@ -509,8 +477,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
           <LoadingSpinner className="py-16" />
         ) : (
           <div className="space-y-5 sm:space-y-6">
-
-            {/* ───────────────── Account Info ───────────────── */}
+            {/* Account Info */}
             <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl backdrop-blur-sm sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-cream sm:text-lg">
                 <SettingsIcon className="h-5 w-5 text-brand-blue-300" />
@@ -540,7 +507,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                 <div
                   className={`mt-4 flex items-center gap-2 rounded-xl border p-3 text-xs font-semibold ${
                     profileMsg.type === 'success'
-                      ? 'border-accentGreen-400/40 bg-accentGreen-500/15 text-accentGreen-300'
+                      ? 'border-mint-400/40 bg-mint-500/15 text-mint-300'
                       : 'border-error/40 bg-error/15 text-error'
                   }`}
                 >
@@ -564,7 +531,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
               </div>
             </div>
 
-            {/* ───────────────── Change Password ───────────────── */}
+            {/* Change Password */}
             <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl backdrop-blur-sm sm:p-6">
               <h2 className="mb-4 flex items-center gap-2 font-display text-base font-bold text-cream sm:text-lg">
                 <Lock className="h-5 w-5 text-brand-blue-300" />
@@ -597,7 +564,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                 <div
                   className={`mt-4 flex items-center gap-2 rounded-xl border p-3 text-xs font-semibold ${
                     passwordMsg.type === 'success'
-                      ? 'border-accentGreen-400/40 bg-accentGreen-500/15 text-accentGreen-300'
+                      ? 'border-mint-400/40 bg-mint-500/15 text-mint-300'
                       : 'border-error/40 bg-error/15 text-error'
                   }`}
                 >
@@ -622,7 +589,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
               </div>
             </div>
 
-            {/* ───────────────── Payment Methods ───────────────── */}
+            {/* Payment Methods */}
             {isAdmin && (
               <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl backdrop-blur-sm sm:p-6">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -681,7 +648,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                                   <span
                                     className={`rounded-full px-2.5 py-0.5 text-[9px] font-bold ${
                                       method.enabled
-                                        ? 'border border-accentGreen-400/40 bg-accentGreen-500/20 text-accentGreen-300'
+                                        ? 'border border-mint-400/40 bg-mint-500/20 text-mint-300'
                                         : 'border border-error/40 bg-error/20 text-error'
                                     }`}
                                   >
@@ -704,7 +671,6 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                             </div>
 
                             <div className="flex items-center justify-end gap-3 sm:justify-start">
-                              {/* Toggle switch with high-contrast accent */}
                               <label className="relative inline-flex cursor-pointer items-center">
                                 <input
                                   type="checkbox"
@@ -712,7 +678,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                                   onChange={() => handleToggleMethod(method.id)}
                                   className="peer sr-only"
                                 />
-                                <div className="peer h-6 w-11 rounded-full border border-forest-600 bg-forest-800 transition-all after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-accentGreen-500 peer-checked:after:translate-x-full peer-focus:outline-none" />
+                                <div className="peer h-6 w-11 rounded-full border border-forest-600 bg-forest-800 transition-all after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:bg-mint-500 peer-checked:after:translate-x-full peer-focus:outline-none" />
                               </label>
 
                               <button
@@ -739,7 +705,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
               </div>
             )}
 
-            {/* ───────────────── Blocked Dates ───────────────── */}
+            {/* Blocked Dates */}
             {isAdmin && (
               <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl backdrop-blur-sm sm:p-6">
                 <h2 className="mb-2 flex items-center gap-2 font-display text-base font-bold text-cream sm:text-lg">
@@ -751,7 +717,6 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                   Block specific courts for private tournaments, holidays, or maintenance
                 </p>
 
-                {/* Court picker pills */}
                 <div className="mb-4">
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-cream-muted">
                     Filter By Court
@@ -781,7 +746,6 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                   </div>
                 </div>
 
-                {/* Add block form */}
                 <div className="mb-5 grid gap-3.5 sm:grid-cols-2 md:grid-cols-4">
                   <Input
                     label="Date to Block"
@@ -846,7 +810,6 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                   </Button>
                 </div>
 
-                {/* Blocked items list */}
                 <div className="space-y-2.5 border-t border-forest-700/80 pt-4">
                   <p className="text-xs font-bold uppercase tracking-wider text-brand-blue-300">
                     {selectedCourt ? `${selectedCourt.name} — ` : ''}Active Blocks
@@ -898,10 +861,10 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
               </div>
             )}
 
-            {/* ───────────────── Staff Management ───────────────── */}
+            {/* Staff Management */}
             {isAdmin && <StaffManagement />}
 
-            {/* ───────────────── App Info ───────────────── */}
+            {/* App Info */}
             <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl backdrop-blur-sm sm:p-6">
               <h2 className="mb-4 font-display text-base font-bold text-cream sm:text-lg">
                 System Information
@@ -928,7 +891,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
         )}
       </div>
 
-      {/* ───────────────── Add/Edit Payment Method Modal ───────────────── */}
+      {/* Add/Edit Payment Method Modal */}
       <Modal
         isOpen={showAddModal || !!editingMethod}
         onClose={() => {
@@ -992,7 +955,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
 
             <Input
               label="Account Holder Name"
-              placeholder="e.g. CenterCourt Tandag"
+              placeholder="e.g. Paddle Place"
               value={formData.config?.account_name || ''}
               onChange={(e) =>
                 setFormData({
@@ -1016,7 +979,6 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
               />
             )}
 
-            {/* QR Code Upload Section */}
             {(formData.type === 'qr_ph' || formData.type === 'gcash') && (
               <div className="space-y-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-cream-muted">
@@ -1033,7 +995,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
                         className="h-24 w-24 rounded-lg border border-forest-700 object-contain bg-white p-1"
                       />
                       <div className="min-w-0 text-center sm:text-left">
-                        <p className="text-xs font-bold text-accentGreen-300">QR Code Linked ✓</p>
+                        <p className="text-xs font-bold text-mint-300">QR Code Linked ✓</p>
                         <button
                           type="button"
                           onClick={() =>
@@ -1104,7 +1066,7 @@ const response = await fetch(`${baseUrl}/api/files/upload`, {
             <div
               className={`flex items-center gap-2 rounded-xl border p-3 text-xs font-semibold ${
                 methodMsg.type === 'success'
-                  ? 'border-accentGreen-400/40 bg-accentGreen-500/15 text-accentGreen-300'
+                  ? 'border-mint-400/40 bg-mint-500/15 text-mint-300'
                   : 'border-error/40 bg-error/15 text-error'
               }`}
             >

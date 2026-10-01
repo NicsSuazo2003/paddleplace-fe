@@ -6,7 +6,6 @@ import { MOCK_COURT_GUIDS } from './bookingService';
 
 const USE_MOCK_DATA = import.meta.env.DEV && import.meta.env.VITE_USE_MOCK_DATA === 'true';
 
-// ✅ FIXED: use the same base URL as apiRequest, not a hardcoded wrong one
 const BACKEND_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? 'https://pickleballbookingclientb.onrender.com';
 
@@ -53,8 +52,8 @@ export function normalizeCourt(raw: any, index: number = 0): Court {
     dimensions: raw.dimensions || '44ft x 20ft',
     images: Array.isArray(raw.images) ? raw.images.map(resolveImageUrl) : [],
     rating: Number(raw.rating ?? 4.8),
-    type: raw.type || 'indoor',
-    is_indoor: raw.indoor ?? raw.is_indoor ?? true,
+    type: raw.type || 'outdoor',
+    is_indoor: raw.indoor ?? raw.is_indoor ?? false,
     is_active: raw.status ? raw.status === 'active' : (raw.is_active ?? true),
     status: raw.status || 'active',
   };
@@ -65,8 +64,8 @@ export function buildCourtPayload(court: Court): Record<string, any> {
   return {
     id: court.id || undefined,
     name: court.name,
-    type: court.type || 'indoor',
-    indoor: court.is_indoor !== undefined ? court.is_indoor : true,
+    type: court.type || 'outdoor',
+    indoor: court.is_indoor !== undefined ? court.is_indoor : false,
     pricePerHour: Number(court.price_per_hour),
     peakPricePerHour: Number(court.peak_price_per_hour),
     description: court.description || '',
