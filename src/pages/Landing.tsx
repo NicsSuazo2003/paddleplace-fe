@@ -310,7 +310,7 @@ export function Landing() {
               {APP_CONFIG.tagline}
             </p>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/75 sm:mt-5 sm:text-base">
-              Book premium indoor and outdoor pickleball courts in seconds. Pay easily with GCash,
+              Book premium outdoor pickleball court in seconds. Pay easily with GCash,
               track your reservations, and join open sessions.
             </p>
 
