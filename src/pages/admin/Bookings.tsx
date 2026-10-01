@@ -390,18 +390,56 @@ export function Bookings() {
                   Actions
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {/* Pending Payment → mark expired */}
+                  {/* Pending Payment → Confirm, Cancel, or Mark Expired */}
                   {selectedBooking.status === 'pending_payment' && (
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      isLoading={updatingStatus === 'expired'}
-                      disabled={updatingStatus !== null}
-                      leftIcon={<XCircle className="h-4 w-4" />}
-                      onClick={() => handleStatusUpdate(selectedBooking.id, 'expired')}
-                    >
-                      Mark Expired
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="success"
+                        isLoading={updatingStatus === 'confirmed'}
+                        disabled={updatingStatus !== null}
+                        leftIcon={<CheckCircle2 className="h-4 w-4" />}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Confirm booking ${selectedBooking.reference_code} without payment verification?\n\nOnly do this if you've already received the payment (e.g. cash on-site or verified GCash outside the app).`
+                            )
+                          ) {
+                            handleStatusUpdate(selectedBooking.id, 'confirmed');
+                          }
+                        }}
+                      >
+                        Confirm Booking
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        isLoading={updatingStatus === 'cancelled'}
+                        disabled={updatingStatus !== null}
+                        leftIcon={<XCircle className="h-4 w-4" />}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Cancel booking ${selectedBooking.reference_code}?`
+                            )
+                          ) {
+                            handleStatusUpdate(selectedBooking.id, 'cancelled');
+                          }
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        isLoading={updatingStatus === 'expired'}
+                        disabled={updatingStatus !== null}
+                        leftIcon={<XCircle className="h-4 w-4" />}
+                        onClick={() => handleStatusUpdate(selectedBooking.id, 'expired')}
+                      >
+                        Mark Expired
+                      </Button>
+                    </>
                   )}
 
                   {/* Payment Submitted → Confirm, Reject, Refund */}
