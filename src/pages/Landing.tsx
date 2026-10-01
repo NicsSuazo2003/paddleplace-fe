@@ -22,6 +22,7 @@ import {
   Armchair,
   Layers,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -88,12 +89,34 @@ function isWithinNextWeek(session: OpenPlaySession): boolean {
   }
 }
 
+/** Returns a friendly "starts in X" label for sessions within 2 hours. */
+function getImminenceLabel(session: OpenPlaySession): string | null {
+  try {
+    const sessionStart = new Date(`${session.date}T${session.start_time}`);
+    const now = new Date();
+    const diffMin = Math.round((sessionStart.getTime() - now.getTime()) / (1000 * 60));
+    if (diffMin <= -60) return null; // past
+    if (diffMin <= 0) return 'Happening now';
+    if (diffMin <= 120) {
+      const h = Math.floor(diffMin / 60);
+      const m = diffMin % 60;
+      if (h === 0) return `Starts in ${m}m`;
+      return `Starts in ${h}h${m > 0 ? ` ${m}m` : ''}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 const SKILL_BADGE: Record<string, string> = {
   Beginner: 'bg-[#DDEFE6] text-[#115259] border border-[#B6DAC8]',
   Intermediate: 'bg-amber-50 text-amber-800 border border-amber-200',
   Advanced: 'bg-[#115259]/10 text-[#115259] border border-[#115259]/20',
   'All Levels': 'bg-[#EEF6F4] text-[#2D534B] border border-[#688D87]/20',
 };
+
+type BookingMode = 'private' | 'open';
 
 export function Landing() {
   const navigate = useNavigate();
@@ -111,6 +134,7 @@ export function Landing() {
     setDate,
     toggleSlot,
     loadAllCourtsSlots,
+    clearSelection,
   } = useBookingStore();
 
   const {
@@ -120,6 +144,7 @@ export function Landing() {
   } = useOpenPlayStore();
 
   const [weekOffset, setWeekOffset] = useState(0);
+  const [bookingMode, setBookingMode] = useState<BookingMode>('private');
   const weekStart = addDays(new Date(), weekOffset * 7);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -248,6 +273,21 @@ export function Landing() {
 
   const isSingleCourt = courts.length === 1;
 
+  // Open Play sessions filtered to the currently selected date
+  const openPlayForSelectedDate = openPlaySessions
+    .filter(
+      (s) =>
+        s.date === selectedDate &&
+        s.is_active &&
+        s.status !== 'cancelled' &&
+        s.status !== 'past'
+    )
+    .sort((a, b) =>
+      `${a.start_time}`.localeCompare(`${b.start_time}`)
+    );
+
+  const hasNoSlotsForPeriod = (times: { start_time: string }[]) => times.length === 0;
+
   return (
     <div className="min-h-screen bg-[#F8FAF9] text-[#162422]">
       <Navbar />
@@ -287,11 +327,8 @@ export function Landing() {
                 <Users className="h-4 w-4 shrink-0 text-[#B6DAC8]" />
                 <span className="truncate text-xs font-semibold text-white sm:text-sm">
                   Open Play{' '}
-                  {nextSession.status === 'active'
-                    ? 'happening now'
-                    : nextSession.date === todayISO()
-                      ? 'today'
-                      : 'soon'}{' '}
+                  {getImminenceLabel(nextSession) ??
+                    (nextSession.date === todayISO() ? 'today' : 'soon')}{' '}
                   · {nextSession.current_players}/{nextSession.max_players} joined
                 </span>
                 <ArrowRight className="h-4 w-4 shrink-0 text-[#B6DAC8]" />
@@ -314,7 +351,7 @@ export function Landing() {
               track your reservations, and join open sessions.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
               <Button
                 size="lg"
                 onClick={scrollToBooking}
@@ -323,6 +360,17 @@ export function Landing() {
               >
                 Book a Court
               </Button>
+              {nextSession && (
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  onClick={() => navigate('/open-play')}
+                  className="border-[#B6DAC8]/40 text-white hover:bg-white/10 backdrop-blur-sm"
+                  leftIcon={<Users className="h-5 w-5" />}
+                >
+                  Join Open Play
+                </Button>
+              )}
               <Button
                 size="lg"
                 variant="secondary"
@@ -410,6 +458,7 @@ export function Landing() {
                   session.current_players >= session.max_players;
                 const spotsLeft = Math.max(0, session.max_players - session.current_players);
                 const isToday = session.date === todayISO();
+                const imminence = getImminenceLabel(session);
                 return (
                   <motion.div
                     key={session.id}
@@ -422,9 +471,11 @@ export function Landing() {
                     <div className="card flex h-full flex-col rounded-2xl border border-[#688D87]/20 bg-white p-4 shadow-sm hover:shadow-md transition">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <span className="inline-flex items-center rounded-md bg-[#EEF6F4] px-2.5 py-0.5 text-xs font-extrabold tracking-wide text-[#115259]">
-                          {isToday
-                            ? 'TODAY'
-                            : formatDateLong(session.date).split(',')[0].toUpperCase()}
+                          {imminence
+                            ? imminence.toUpperCase()
+                            : isToday
+                              ? 'TODAY'
+                              : formatDateLong(session.date).split(',')[0].toUpperCase()}
                         </span>
                         <span
                           className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
@@ -518,6 +569,32 @@ export function Landing() {
                     <CalendarDays className="h-5 w-5 md:h-6 md:w-6" />
                   </div>
                 </div>
+
+                {/* Booking mode tabs */}
+                <div className="mt-4 inline-flex rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] p-1">
+                  <button
+                    onClick={() => setBookingMode('private')}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      bookingMode === 'private'
+                        ? 'bg-[#115259] text-white shadow-sm'
+                        : 'text-[#526E69] hover:text-[#115259]'
+                    }`}
+                  >
+                    <CalendarPlus className="h-3.5 w-3.5" />
+                    Private Court
+                  </button>
+                  <button
+                    onClick={() => setBookingMode('open')}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+                      bookingMode === 'open'
+                        ? 'bg-[#115259] text-white shadow-sm'
+                        : 'text-[#526E69] hover:text-[#115259]'
+                    }`}
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    Open Play
+                  </button>
+                </div>
               </div>
 
               <div className="p-4 pb-24 sm:p-6 sm:pb-24 md:p-8 md:pb-8">
@@ -531,10 +608,12 @@ export function Landing() {
                       <h3 className="font-display text-sm font-bold text-[#162422] sm:text-base">Choose Date</h3>
                     </div>
 
-                    {/* NEW: Calendar picker for jumping to any date */}
-                    <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] px-3 py-2 text-xs font-semibold text-[#115259] transition hover:border-[#115259]/40 hover:bg-[#F0F6F5]">
+                    <label
+                      className="relative inline-flex cursor-pointer items-center gap-2 rounded-xl border border-[#688D87]/25 bg-[#F8FAF9] px-3 py-2 text-xs font-semibold text-[#115259] transition hover:border-[#115259]/40 hover:bg-[#F0F6F5]"
+                      title="Jump to any date"
+                    >
                       <CalendarDays className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Pick any date</span>
+                      <span className="hidden sm:inline">Jump to any date</span>
                       <span className="sm:hidden">Calendar</span>
                       <input
                         type="date"
@@ -543,7 +622,6 @@ export function Landing() {
                         onChange={(e) => {
                           if (!e.target.value) return;
                           setDate(e.target.value);
-                          // Snap week offset so the selected date appears in the strip
                           const picked = new Date(e.target.value + 'T00:00:00');
                           const today = new Date();
                           today.setHours(0, 0, 0, 0);
@@ -554,7 +632,7 @@ export function Landing() {
                           setWeekOffset(offset);
                         }}
                         className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                        aria-label="Pick any date"
+                        aria-label="Jump to any date"
                       />
                     </label>
                   </div>
@@ -570,7 +648,7 @@ export function Landing() {
                         <ChevronLeft className="h-5 w-5" />
                       </button>
 
-                      <div className="flex flex-1 gap-2 overflow-x-auto pb-1.5 pt-2.5 sm:grid sm:grid-cols-7 sm:overflow-visible sm:py-0 no-scrollbar snap-x">
+                      <div className="flex flex-1 gap-2 overflow-x-auto pt-3 pb-1.5 sm:grid sm:grid-cols-7 sm:overflow-visible sm:py-0 no-scrollbar snap-x">
                         {weekDays.map((day) => {
                           const iso = toISODate(day);
                           const isSelected = selectedDate === iso;
@@ -645,7 +723,11 @@ export function Landing() {
                         2
                       </div>
                       <h3 className="font-display text-sm font-bold text-[#162422] sm:text-base">
-                        {isSingleCourt ? 'Select Time Slots' : 'Choose Court & Time'}
+                        {bookingMode === 'open'
+                          ? 'Join an Open Play Session'
+                          : isSingleCourt
+                            ? 'Select Time Slots'
+                            : 'Choose Court & Time'}
                       </h3>
                     </div>
 
@@ -661,30 +743,40 @@ export function Landing() {
                     </span>
                   </div>
 
-                  {/* Dot Legend */}
-                  <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-[#688D87]/20 pb-3 text-[11px] text-[#526E69]">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full border border-[#688D87]/30 bg-[#F0F6F5]" />
-                      <span>Available</span>
+                  {/* Rule hint */}
+                  <p className="mb-4 text-[11px] text-[#526E69] sm:text-xs">
+                    {bookingMode === 'open'
+                      ? 'Tap a session to see details and join. Spots are first-come, first-served.'
+                      : 'You can select multiple slots. Cross-court selection is allowed.'}
+                  </p>
+
+                  {/* Legend — only in private mode */}
+                  {bookingMode === 'private' && (
+                    <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-[#688D87]/20 pb-3 text-[11px] text-[#526E69]">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full border border-[#688D87]/30 bg-[#F0F6F5]" />
+                        <span>Available</span>
+                      </div>
+                      <div className="flex items-center gap-1.5" title="Another user is currently completing payment">
+                        <span className="h-2 w-2 rounded-full bg-amber-400" />
+                        <span>On hold</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-red-400" />
+                        <span>Booked</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-amber-400" />
-                      <span>Pending</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-red-400" />
-                      <span>Booked</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-[#B6DAC8]" />
-                      <span>Open Play</span>
-                    </div>
-                  </div>
+                  )}
 
                   {loadingSlots || loadingCourts || loadingOpenPlay ? (
                     <LoadingSpinner className="py-12 md:py-20" />
                   ) : error ? (
                     <div className="py-8 text-center font-medium text-red-600 md:py-16">{error}</div>
+                  ) : bookingMode === 'open' ? (
+                    <OpenPlayGrid
+                      sessions={openPlayForSelectedDate}
+                      onSelect={handleOpenPlayClick}
+                    />
                   ) : courts.length === 0 ? (
                     <div className="py-8 text-center text-sm font-medium text-[#526E69] md:py-16">
                       No courts found.
@@ -726,79 +818,92 @@ export function Landing() {
                           </div>
 
                           <div className="space-y-6">
-                            {morningTimes.length > 0 && (
-                              <DesktopPeriodSection
-                                title="MORNING"
-                                icon={<CloudSun className="h-4 w-4 text-[#115259]" />}
-                                courts={courts}
-                                isSingleCourt={isSingleCourt}
-                                timeIntervals={morningTimes}
-                                getSlotForCourtAndTime={getSlotForCourtAndTime}
-                                selectedSlotIds={selectedSlotIds}
-                                onToggleSlot={toggleSlot}
-                                getOpenPlaySession={getOpenPlaySessionForSlot}
-                                onOpenPlayClick={handleOpenPlayClick}
-                              />
-                            )}
-                            {afternoonTimes.length > 0 && (
-                              <DesktopPeriodSection
-                                title="AFTERNOON"
-                                icon={<Sun className="h-4 w-4 text-[#115259]" />}
-                                courts={courts}
-                                isSingleCourt={isSingleCourt}
-                                timeIntervals={afternoonTimes}
-                                getSlotForCourtAndTime={getSlotForCourtAndTime}
-                                selectedSlotIds={selectedSlotIds}
-                                onToggleSlot={toggleSlot}
-                                getOpenPlaySession={getOpenPlaySessionForSlot}
-                                onOpenPlayClick={handleOpenPlayClick}
-                              />
-                            )}
-                            {eveningTimes.length > 0 && (
-                              <DesktopPeriodSection
-                                title="EVENING"
-                                icon={<Moon className="h-4 w-4 text-[#115259]" />}
-                                courts={courts}
-                                isSingleCourt={isSingleCourt}
-                                timeIntervals={eveningTimes}
-                                getSlotForCourtAndTime={getSlotForCourtAndTime}
-                                selectedSlotIds={selectedSlotIds}
-                                onToggleSlot={toggleSlot}
-                                getOpenPlaySession={getOpenPlaySessionForSlot}
-                                onOpenPlayClick={handleOpenPlayClick}
-                              />
-                            )}
+                            <DesktopPeriodSection
+                              title="MORNING"
+                              icon={<CloudSun className="h-4 w-4 text-[#115259]" />}
+                              courts={courts}
+                              isSingleCourt={isSingleCourt}
+                              timeIntervals={morningTimes}
+                              getSlotForCourtAndTime={getSlotForCourtAndTime}
+                              selectedSlotIds={selectedSlotIds}
+                              onToggleSlot={toggleSlot}
+                              getOpenPlaySession={getOpenPlaySessionForSlot}
+                              onOpenPlayClick={handleOpenPlayClick}
+                              showOpenPlay={false}
+                              emptyLabel="No morning slots for this date"
+                            />
+                            <DesktopPeriodSection
+                              title="AFTERNOON"
+                              icon={<Sun className="h-4 w-4 text-[#115259]" />}
+                              courts={courts}
+                              isSingleCourt={isSingleCourt}
+                              timeIntervals={afternoonTimes}
+                              getSlotForCourtAndTime={getSlotForCourtAndTime}
+                              selectedSlotIds={selectedSlotIds}
+                              onToggleSlot={toggleSlot}
+                              getOpenPlaySession={getOpenPlaySessionForSlot}
+                              onOpenPlayClick={handleOpenPlayClick}
+                              showOpenPlay={false}
+                              emptyLabel="No afternoon slots for this date"
+                            />
+                            <DesktopPeriodSection
+                              title="EVENING"
+                              icon={<Moon className="h-4 w-4 text-[#115259]" />}
+                              courts={courts}
+                              isSingleCourt={isSingleCourt}
+                              timeIntervals={eveningTimes}
+                              getSlotForCourtAndTime={getSlotForCourtAndTime}
+                              selectedSlotIds={selectedSlotIds}
+                              onToggleSlot={toggleSlot}
+                              getOpenPlaySession={getOpenPlaySessionForSlot}
+                              onOpenPlayClick={handleOpenPlayClick}
+                              showOpenPlay={false}
+                              emptyLabel="No evening slots for this date"
+                            />
                           </div>
                         </div>
                       </div>
                     </div>
                   )}
 
-                  <div className="mt-8 hidden items-center justify-between gap-4 rounded-xl border border-[#688D87]/20 bg-[#F8FAF9] p-5 sm:flex">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-[#526E69]">
-                        Selected Slots
-                      </span>
-                      <div className="text-lg font-bold text-[#162422]">
-                        {selectedSlotIds.length} slot{selectedSlotIds.length !== 1 && 's'} chosen
+                  {/* Desktop summary (private only) */}
+                  {bookingMode === 'private' && (
+                    <div className="mt-8 hidden items-center justify-between gap-4 rounded-xl border border-[#688D87]/20 bg-[#F8FAF9] p-5 sm:flex">
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#526E69]">
+                          Selected Slots
+                        </span>
+                        <div className="text-lg font-bold text-[#162422]">
+                          {selectedSlotIds.length} slot{selectedSlotIds.length !== 1 && 's'} chosen
+                          {selectedSlotIds.length > 0 && (
+                            <span className="ml-2 text-base font-extrabold text-[#115259]">
+                              ({formatCurrency(totalSelected)})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
                         {selectedSlotIds.length > 0 && (
-                          <span className="ml-2 text-base font-extrabold text-[#115259]">
-                            ({formatCurrency(totalSelected)})
-                          </span>
+                          <button
+                            onClick={clearSelection}
+                            className="text-xs font-semibold text-[#526E69] underline-offset-2 hover:text-[#115259] hover:underline"
+                          >
+                            Clear all
+                          </button>
                         )}
+                        <Button
+                          size="md"
+                          onClick={() => navigate('/booking')}
+                          disabled={selectedSlotIds.length === 0}
+                          className="bg-[#115259] text-white hover:bg-[#0E4348]"
+                          rightIcon={<ArrowRight className="h-5 w-5" />}
+                        >
+                          Proceed to Reservation
+                        </Button>
                       </div>
                     </div>
-
-                    <Button
-                      size="md"
-                      onClick={() => navigate('/booking')}
-                      disabled={selectedSlotIds.length === 0}
-                      className="bg-[#115259] text-white hover:bg-[#0E4348]"
-                      rightIcon={<ArrowRight className="h-5 w-5" />}
-                    >
-                      Proceed to Reservation
-                    </Button>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -823,36 +928,12 @@ export function Landing() {
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
             {[
-              {
-                icon: Layers,
-                title: 'Silica Sand Finish',
-                desc: 'Consistent ball bounce & optimal joint-safe traction',
-              },
-              {
-                icon: Sparkles,
-                title: 'Paddle Rental',
-                desc: '₱30 / hour — quality gear available on-site',
-              },
-              {
-                icon: Coffee,
-                title: 'In-House Cafe',
-                desc: 'Refreshments, drinks, and snacks right beside the court',
-              },
-              {
-                icon: Car,
-                title: 'Dedicated Parking',
-                desc: 'Private, secure parking area for cars & motorcycles',
-              },
-              {
-                icon: Armchair,
-                title: 'Shaded Waiting Area',
-                desc: 'Comfortable covered benches while waiting for your slot',
-              },
-              {
-                icon: Wifi,
-                title: 'Piso Wi-Fi & Restroom',
-                desc: 'Stay connected and enjoy clean, private comfort rooms',
-              },
+              { icon: Layers, title: 'Silica Sand Finish', desc: 'Consistent ball bounce & optimal joint-safe traction' },
+              { icon: Sparkles, title: 'Paddle Rental', desc: '₱30 / hour — quality gear available on-site' },
+              { icon: Coffee, title: 'In-House Cafe', desc: 'Refreshments, drinks, and snacks right beside the court' },
+              { icon: Car, title: 'Dedicated Parking', desc: 'Private, secure parking area for cars & motorcycles' },
+              { icon: Armchair, title: 'Shaded Waiting Area', desc: 'Comfortable covered benches while waiting for your slot' },
+              { icon: Wifi, title: 'Piso Wi-Fi & Restroom', desc: 'Stay connected and enjoy clean, private comfort rooms' },
             ].map((item, idx) => {
               const Icon = item.icon;
               return (
@@ -880,8 +961,8 @@ export function Landing() {
         </div>
       </section>
 
-      {/* Sticky Mobile Reservation Bar */}
-      {selectedSlotIds.length > 0 && (
+      {/* Sticky Mobile Reservation Bar (private only) */}
+      {bookingMode === 'private' && selectedSlotIds.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#688D87]/20 bg-white/95 p-3.5 backdrop-blur-md sm:hidden">
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
@@ -890,6 +971,12 @@ export function Landing() {
               </p>
               <p className="text-lg font-bold text-[#115259]">{formatCurrency(totalSelected)}</p>
             </div>
+            <button
+              onClick={clearSelection}
+              className="shrink-0 rounded-lg border border-[#688D87]/25 px-2.5 py-1.5 text-xs font-semibold text-[#526E69]"
+            >
+              Clear
+            </button>
             <Button
               size="md"
               onClick={() => navigate('/booking')}
@@ -916,21 +1003,9 @@ export function Landing() {
 
           <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
             {[
-              {
-                icon: CalendarPlus,
-                title: 'Instant Booking',
-                desc: 'Select your preferred time slots in under a minute. No phone calls, no waiting.',
-              },
-              {
-                icon: Wallet,
-                title: 'GCash Payment',
-                desc: 'Pay securely with GCash. Upload your receipt and get confirmed quickly.',
-              },
-              {
-                icon: ShieldCheck,
-                title: 'Admin Verified',
-                desc: 'Every booking is reviewed and confirmed by our team so your court is always guaranteed.',
-              },
+              { icon: CalendarPlus, title: 'Instant Booking', desc: 'Select your preferred time slots in under a minute. No phone calls, no waiting.' },
+              { icon: Wallet, title: 'GCash Payment', desc: 'Pay securely with GCash. Upload your receipt and get confirmed quickly.' },
+              { icon: ShieldCheck, title: 'Admin Verified', desc: 'Every booking is reviewed and confirmed by our team so your court is always guaranteed.' },
             ].map((feat, i) => {
               const Icon = feat.icon;
               return (
@@ -945,7 +1020,6 @@ export function Landing() {
                   <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F2EE] text-[#115259]">
                     <Icon className="h-6 w-6" />
                   </div>
-
                   <h3 className="font-display text-base font-bold text-[#162422] sm:text-lg">{feat.title}</h3>
                   <p className="mt-2 text-xs leading-relaxed text-[#526E69] sm:text-sm">{feat.desc}</p>
                 </motion.div>
@@ -956,7 +1030,7 @@ export function Landing() {
       </section>
 
       {/* How It Works Section */}
-      <section className="py-14 sm:py-20 bg-white">
+      <section className="py-14 sm:py-20 bg-white pb-24 sm:pb-20">
         <div className="container-page">
           <div className="mb-10 text-center sm:mb-12">
             <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#115259]">
@@ -985,10 +1059,8 @@ export function Landing() {
                 <div className="mb-3 font-display text-4xl font-extrabold tracking-tight text-[#115259]/30 sm:mb-4 sm:text-5xl">
                   {item.step}
                 </div>
-
                 <h3 className="font-display text-base font-bold text-[#162422] sm:text-lg">{item.title}</h3>
                 <p className="mt-2 text-xs leading-relaxed text-[#526E69] sm:text-sm">{item.desc}</p>
-
                 {i < 3 && (
                   <div className="mt-6 hidden h-px bg-gradient-to-r from-[#115259]/25 via-[#115259]/10 to-transparent md:block" />
                 )}
@@ -998,7 +1070,6 @@ export function Landing() {
         </div>
       </section>
 
-      <div className="h-20 sm:hidden" />
       <Footer />
     </div>
   );
@@ -1007,6 +1078,105 @@ export function Landing() {
 // --------------------------------------------------------
 // SUB-COMPONENTS
 // --------------------------------------------------------
+
+function OpenPlayGrid({
+  sessions,
+  onSelect,
+}: {
+  sessions: OpenPlaySession[];
+  onSelect: (s: OpenPlaySession) => void;
+}) {
+  if (sessions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-[#688D87]/30 bg-[#F8FAF9] py-12 text-center text-sm font-medium text-[#526E69] md:py-16">
+        No Open Play sessions scheduled for this date.
+        <div className="mt-1 text-xs text-[#526E69]/80">
+          Try another date or check back later.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+      {sessions.map((session) => {
+        const isFull =
+          session.status === 'full' ||
+          session.current_players >= session.max_players;
+        const spotsLeft = Math.max(0, session.max_players - session.current_players);
+        const imminence = getImminenceLabel(session);
+
+        return (
+          <div
+            key={session.id}
+            className="card flex h-full flex-col rounded-2xl border border-[#B6DAC8]/60 bg-[#F4FBF7] p-4 shadow-sm transition hover:shadow-md"
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-white px-2.5 py-0.5 text-xs font-extrabold tracking-wide text-[#115259]">
+                <Clock className="h-3.5 w-3.5" />
+                {formatTimeRangeShort(session.start_time, session.end_time)}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                  SKILL_BADGE[session.skill_level] ?? SKILL_BADGE['All Levels']
+                }`}
+              >
+                {session.skill_level}
+              </span>
+            </div>
+
+            <h3 className="truncate font-display text-base font-bold text-[#162422]">
+              {session.title || session.host_name || session.court_name}
+            </h3>
+
+            <div className="mt-2 space-y-1.5 text-xs text-[#526E69]">
+              {imminence && (
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-800 border border-amber-200">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  </span>
+                  {imminence}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Users className="h-3.5 w-3.5 text-[#115259]" />
+                <span>
+                  {session.current_players}/{session.max_players} · {spotsLeft}{' '}
+                  spot{spotsLeft === 1 ? '' : 's'} left
+                </span>
+              </div>
+              {session.host_name && (
+                <div className="flex items-center gap-2">
+                  <UserCircle2 className="h-3.5 w-3.5 text-[#115259]" />
+                  <span className="truncate">Hosted by {session.host_name}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex items-center justify-between border-t border-[#688D87]/15 pt-3">
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-[#526E69]">Per player</p>
+                <p className="font-display text-base font-extrabold text-[#115259] sm:text-lg">
+                  {formatCurrency(session.price_per_player)}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                disabled={isFull}
+                onClick={() => onSelect(session)}
+                className={isFull ? 'bg-gray-100 text-gray-400' : 'bg-[#115259] text-white hover:bg-[#0E4348]'}
+                rightIcon={<ArrowRight className="h-4 w-4" />}
+              >
+                {isFull ? 'Full' : 'Join'}
+              </Button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function DesktopPeriodSection({
   title,
@@ -1019,6 +1189,8 @@ function DesktopPeriodSection({
   onToggleSlot,
   getOpenPlaySession,
   onOpenPlayClick,
+  showOpenPlay,
+  emptyLabel,
 }: {
   title: string;
   icon: React.ReactNode;
@@ -1030,7 +1202,26 @@ function DesktopPeriodSection({
   onToggleSlot: (slotId: string) => void;
   getOpenPlaySession?: (courtId: string, startTime: string, endTime: string) => OpenPlaySession | undefined;
   onOpenPlayClick?: (session: OpenPlaySession) => void;
+  showOpenPlay: boolean;
+  emptyLabel: string;
 }) {
+  if (timeIntervals.length === 0) {
+    return (
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <span className="h-4 w-4">{icon}</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-[#526E69]">
+            {title}
+          </span>
+          <div className="h-px flex-1 bg-[#688D87]/20" />
+        </div>
+        <div className="rounded-xl border border-dashed border-[#688D87]/25 bg-white/60 px-3 py-4 text-center text-[11px] text-[#526E69]/70">
+          {emptyLabel}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-center gap-2">
@@ -1055,7 +1246,9 @@ function DesktopPeriodSection({
             {courts.map((court, idx) => {
               const slot = getSlotForCourtAndTime(court.id, interval.start_time, interval.end_time);
               const accent = getCourtAccent(idx);
-              const openPlaySession = getOpenPlaySession?.(court.id, interval.start_time, interval.end_time);
+              const openPlaySession = showOpenPlay
+                ? getOpenPlaySession?.(court.id, interval.start_time, interval.end_time)
+                : undefined;
 
               if (!slot) {
                 return (
@@ -1110,10 +1303,13 @@ function OpenPlayPill({
   return (
     <button
       onClick={onClick}
-      className="group relative flex h-11 w-full items-center justify-between rounded-xl border border-[#B6DAC8] bg-[#E8F5EE] px-3 font-bold transition-all hover:bg-[#D7ECE1] hover:border-[#115259]/50 shadow-sm"
+      className="group relative flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-[#B6DAC8] bg-[#E8F5EE] px-3 font-bold transition-all hover:bg-[#D7ECE1] hover:border-[#115259]/50 shadow-sm"
       title={`Open Play: ${session.current_players}/${session.max_players} players · ${session.skill_level}`}
     >
-      <span className="text-xs font-black text-[#115259]">OP</span>
+      <span className="inline-flex items-center gap-1 text-[11px] font-black text-[#115259]">
+        <Users className="h-3.5 w-3.5" />
+        Open
+      </span>
       <span className="text-xs font-bold text-[#162422]">
         {session.current_players}/{session.max_players}
       </span>
@@ -1160,10 +1356,17 @@ function SlotPill({
     <button
       onClick={isAvailable && !isPending ? onToggle : undefined}
       disabled={!isAvailable || isPending}
-      className={`flex h-11 w-full items-center justify-center rounded-xl border text-[11px] font-semibold tracking-tight transition-all px-1 ${styleClasses}`}
+      title={
+        !isAvailable
+          ? 'Already booked'
+          : isPending
+            ? 'On hold — another user is completing payment'
+            : `${formatTimeRangeShort(slot.start_time, slot.end_time)} · ${formatCurrency(slot.price)}`
+      }
+      className={`flex h-11 w-full items-center justify-center rounded-xl border text-xs font-bold tracking-tight transition-all px-2 ${styleClasses}`}
     >
       <span className="truncate">
-        {formatTimeRangeShort(slot.start_time, slot.end_time)}
+        {isAvailable && !isPending ? formatCurrency(slot.price) : formatTimeRangeShort(slot.start_time, slot.end_time)}
       </span>
     </button>
   );

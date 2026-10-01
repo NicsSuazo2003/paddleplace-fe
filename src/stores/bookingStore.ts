@@ -4,6 +4,8 @@ import { courtService } from '@/services/courtService';
 import { bookingService } from '@/services/bookingService';
 import { todayISO } from '@/utils/format';
 
+type BookingMode = 'private' | 'open';
+
 interface BookingStoreState {
   courts: Court[];
   selectedCourt: Court | null;
@@ -16,6 +18,10 @@ interface BookingStoreState {
   loadingSlots: boolean;
   error: string | null;
 
+  // ✅ NEW: UI mode for the booking grid (private court vs open play)
+  bookingMode: BookingMode;
+  setBookingMode: (mode: BookingMode) => void;
+
   loadCourts: () => Promise<void>;
   selectCourt: (court: Court) => void;
   setDate: (date: string) => void;
@@ -23,6 +29,7 @@ interface BookingStoreState {
   loadAllCourtsSlots: () => Promise<void>;
   toggleSlot: (slotId: string) => void;
   clearSlots: () => void;
+  clearSelection: () => void;
   setCustomer: (customer: Partial<CustomerDetails>) => void;
   createBooking: () => Promise<Booking>;
   reset: () => void;
@@ -47,6 +54,10 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
   loadingCourts: false,
   loadingSlots: false,
   error: null,
+
+  // ✅ NEW: default to private court booking
+  bookingMode: 'private',
+  setBookingMode: (mode) => set({ bookingMode: mode }),
 
   loadCourts: async () => {
     set({ loadingCourts: true, error: null });
@@ -145,60 +156,75 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
     }
   },
 
+  // ✅ REFACTORED: pure immutable updates — no direct state mutation
   toggleSlot: (slotId) => {
     set((state) => {
       const slot = state.slots.find((s) => s.id === slotId);
       if (!slot) return state;
-      
+
+      // If tapping a slot from a different court, switch the selected court
       const currentCourtId = state.selectedCourt?.id;
-      if (currentCourtId !== slot.court_id) {
-        const newCourt = state.courts.find(c => c.id === slot.court_id);
-        if (newCourt) {
-          state.selectedCourt = newCourt;
-        }
-      }
-      
+      const newCourt =
+        currentCourtId !== slot.court_id
+          ? state.courts.find((c) => c.id === slot.court_id)
+          : undefined;
+
+      const courtPatch = newCourt ? { selectedCourt: newCourt } : {};
+
       const exists = state.selectedSlotIds.includes(slotId);
       if (exists) {
-        return { selectedSlotIds: state.selectedSlotIds.filter((id) => id !== slotId) };
+        return {
+          selectedSlotIds: state.selectedSlotIds.filter((id) => id !== slotId),
+          ...courtPatch,
+        };
       }
 
+      // fixed_2hr slots are exclusive — replace any prior selection
       if (slot.type === 'fixed_2hr') {
-        return { selectedSlotIds: [slotId] };
+        return {
+          selectedSlotIds: [slotId],
+          ...courtPatch,
+        };
       }
 
+      // Otherwise: drop any existing fixed_2hr selection, then append
       const filtered = state.selectedSlotIds.filter((id) => {
         const s = state.slots.find((sl) => sl.id === id);
         return s?.type !== 'fixed_2hr';
       });
 
-      return { selectedSlotIds: [...filtered, slotId] };
+      return {
+        selectedSlotIds: [...filtered, slotId],
+        ...courtPatch,
+      };
     });
   },
 
   clearSlots: () => set({ selectedSlotIds: [] }),
+
+  // ✅ NEW: alias — clearer intent name for UI components
+  clearSelection: () => get().clearSlots(),
 
   setCustomer: (customerData) =>
     set((state) => ({
       customer: { ...state.customer, ...customerData },
     })),
 
-  // ✅ FIXED: createBooking now derives courts from selected slots
   createBooking: async () => {
     const { selectedDate, selectedSlotIds, slots, customer } = get();
-    
+
     console.log('🔵 createBooking called with:', {
       selectedSlotIds,
       slotsCount: slots.length,
       customer,
     });
-    
+
     if (selectedSlotIds.length === 0) {
       console.error('❌ No slots selected');
       throw new Error('Please select at least one time slot');
     }
 
-    // ✅ Derive courts from the actual selected slots, not the stale selectedCourt
+    // Derive courts from the actual selected slots, not the stale selectedCourt
     const selectedSlotObjs = slots.filter((s) => selectedSlotIds.includes(s.id));
     const courtIds = Array.from(new Set(selectedSlotObjs.map((s) => s.court_id)));
 
@@ -210,42 +236,40 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
 
     const createdBookings = [];
 
-    // ✅ Group by court and submit one booking per court
+    // Group by court and submit one booking per court
     for (const courtId of courtIds) {
       console.log(`🔵 Processing court ${courtId}...`);
-      
+
       const freshSlots = await courtService.getAvailability(courtId, selectedDate);
       console.log(`✅ Fresh slots loaded for court ${courtId}:`, freshSlots.length);
-      
+
       const idsForThisCourt = selectedSlotObjs
         .filter((s) => s.court_id === courtId)
         .map((s) => s.id);
 
-      // Check if all slots for this court are still available
       const stillAvailable = idsForThisCourt.every((slotId) => {
         const fresh = freshSlots.find((s) => s.id === slotId);
         return fresh?.is_available === true;
       });
 
       if (!stillAvailable) {
-        // Find which slots are still available
         const stillAvailableIds = idsForThisCourt.filter((slotId) => {
           const fresh = freshSlots.find((s) => s.id === slotId);
           return fresh?.is_available === true;
         });
-        
-        // Update store with fresh data
+
         set((state) => ({
           slots: state.slots.map((s) => freshSlots.find((f) => f.id === s.id) ?? s),
           selectedSlotIds: state.selectedSlotIds.filter(
             (id) => !idsForThisCourt.includes(id) || stillAvailableIds.includes(id)
           ),
         }));
-        
-        throw new Error(`One or more selected time slots for court ${courtId} are no longer available. Please select new slots.`);
+
+        throw new Error(
+          `One or more selected time slots for court ${courtId} are no longer available. Please select new slots.`
+        );
       }
 
-      // Build booking payload for this court
       const thisCourtSlots = freshSlots.filter((s) => idsForThisCourt.includes(s.id));
       const bookingSlots: BookingSlotItem[] = thisCourtSlots.map((s) => ({
         id: s.id,
@@ -261,7 +285,6 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
       const totalAmount = bookingSlots.reduce((sum, s) => sum + s.price, 0);
       console.log(`🔵 Total amount for court ${courtId}:`, totalAmount);
 
-      // Create the booking for this court
       const booking = await bookingService.createBooking({
         court_id: courtId,
         date: selectedDate,
@@ -269,17 +292,16 @@ export const useBookingStore = create<BookingStoreState>((set, get) => ({
         customer,
         total_amount: totalAmount,
       });
-      
+
       console.log(`✅ Booking created for court ${courtId}:`, booking.reference_code);
       createdBookings.push(booking);
     }
 
-    // Store the last booking (or an array if you want to handle multiple)
-    set({ 
-      currentBooking: createdBookings[createdBookings.length - 1], 
-      selectedSlotIds: [] 
+    set({
+      currentBooking: createdBookings[createdBookings.length - 1],
+      selectedSlotIds: [],
     });
-    
+
     return createdBookings[createdBookings.length - 1];
   },
 
