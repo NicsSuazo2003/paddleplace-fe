@@ -1327,7 +1327,6 @@ function OpenPlayPill({
     </button>
   );
 }
-
 function SlotPill({
   slot,
   isSelected,
@@ -1363,10 +1362,10 @@ function SlotPill({
             ? 'On hold — another user is completing payment'
             : `${formatTimeRangeShort(slot.start_time, slot.end_time)} · ${formatCurrency(slot.price)}`
       }
-      className={`flex h-11 w-full items-center justify-center rounded-xl border text-xs font-bold tracking-tight transition-all px-2 ${styleClasses}`}
+      className={`flex h-11 w-full items-center justify-center rounded-xl border text-[11px] font-semibold tracking-tight transition-all px-1 ${styleClasses}`}
     >
       <span className="truncate">
-        {isAvailable && !isPending ? formatCurrency(slot.price) : formatTimeRangeShort(slot.start_time, slot.end_time)}
+        {formatTimeRangeShort(slot.start_time, slot.end_time)}
       </span>
     </button>
   );
