@@ -5,7 +5,7 @@ export default {
     extend: {
       colors: {
         // Core neutrals
-        charcoal: '#162422', // Fixed: Resolves `bg-charcoal` in index.css
+        charcoal: '#162422',
         pine: '#162422',
 
         // ⭐ Paddle Place Core Deep Teal
@@ -108,9 +108,9 @@ export default {
       },
 
       fontFamily: {
-        sans: ['Inter', 'Plus Jakarta Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['Fredoka', 'Montserrat', 'sans-serif'],
-        sub: ['Montserrat', 'Inter', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['Fredoka', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sub: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
 
       boxShadow: {
