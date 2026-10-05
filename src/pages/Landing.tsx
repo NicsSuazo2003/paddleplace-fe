@@ -16,8 +16,12 @@ import {
   CloudSun,
   Users,
   UserCircle2,
+  Layers,
   Sparkles,
-  X,
+  Coffee,
+  Car,
+  Wifi,
+  Armchair,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -402,20 +406,32 @@ export function Landing() {
             </div>
 
             {/* Hero chips — hardcoded marketing copy */}
-            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
-                <span>Silica Sand Court</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-semibold text-[#B6DAC8] backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
-                <span>Paddle Rental ₱30/hr</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
-                <span>In-House Cafe & CR</span>
-              </span>
-            </div>
+<div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
+    <Layers className="h-3.5 w-3.5 text-[#B6DAC8]" />
+    <span>Silica Sand Court</span>
+  </span>
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-semibold text-[#B6DAC8] backdrop-blur-md">
+    <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
+    <span>Paddle Rental ₱30/hr</span>
+  </span>
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+    <Coffee className="h-3.5 w-3.5 text-[#B6DAC8]" />
+    <span>In-House Cafe & CR</span>
+  </span>
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+    <Car className="h-3.5 w-3.5 text-[#B6DAC8]" />
+    <span>Own Parking</span>
+  </span>
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+    <Wifi className="h-3.5 w-3.5 text-[#B6DAC8]" />
+    <span>Piso Wi-Fi</span>
+  </span>
+  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+    <Armchair className="h-3.5 w-3.5 text-[#B6DAC8]" />
+    <span>Shaded Waiting Area</span>
+  </span>
+</div>
           </motion.div>
         </div>
       </section>
