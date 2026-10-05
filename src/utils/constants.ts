@@ -1,4 +1,6 @@
-  export const APP_CONFIG = {
+import type { AmenityItem } from '@/types';
+
+export const APP_CONFIG = {
     name: import.meta.env.VITE_APP_NAME ?? 'Paddle Place',        // ✅ Fixed: fallback changed from 'Center Court'
     demoMode: (import.meta.env.VITE_DEMO_MODE ?? 'false') === 'true',
     apiUrl: import.meta.env.VITE_API_BASE_URL ?? 'https://pickleballbookingclientb.onrender.com',
@@ -109,3 +111,13 @@
     'Spectator Seating',
     'WiFi',
   ];
+
+  // ✅ Fallback amenities shown when a client hasn't configured any yet
+export const DEFAULT_AMENITIES: AmenityItem[] = [
+  { name: 'Silica Sand Finish',    icon: 'Layers',   description: 'Consistent ball bounce & optimal joint-safe traction' },
+  { name: 'Paddle Rental',         icon: 'Dumbbell', description: '₱30 / hour — quality gear available on-site' },
+  { name: 'In-House Cafe',         icon: 'Coffee',   description: 'Refreshments, drinks, and snacks right beside the court' },
+  { name: 'Dedicated Parking',     icon: 'Car',      description: 'Private, secure parking area for cars & motorcycles' },
+  { name: 'Shaded Waiting Area',   icon: 'Armchair', description: 'Comfortable covered benches while waiting for your slot' },
+  { name: 'Piso Wi-Fi & Restroom', icon: 'Wifi',     description: 'Stay connected and enjoy clean, private comfort rooms' },
+];

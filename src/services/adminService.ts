@@ -1,4 +1,7 @@
-import type { Analytics, Booking, BookingStatus, Court, BlockedDate, ClientSettings, PaymentMethod } from '@/types';
+import type {
+  Analytics, Booking, BookingStatus, Court, BlockedDate,
+  ClientSettings, PaymentMethod, AmenityItem,
+} from '@/types';
 import { apiRequest } from './api';
 import { normalizeCourt, buildCourtPayload } from './courtService';
 
@@ -14,6 +17,7 @@ function normalizeClientSettings(raw: any): ClientSettings {
     gcash_number: data.gcashNumber ?? data.gcash_number ?? null,
     gcash_account_name: data.gcashAccountName ?? data.gcash_account_name ?? null,
     payment_methods: data.paymentMethods ?? data.payment_methods ?? [],
+    available_amenities: data.availableAmenities ?? data.available_amenities ?? [],
   };
 }
 
@@ -101,26 +105,28 @@ export const adminService = {
   },
 
   async updateSettings(payload: {
-    name?: string;
-    gcash_number?: string;
-    gcash_account_name?: string;
-    payment_methods?: PaymentMethod[];
-    rcbc_account_name?: string;
-    rcbc_qr_image?: string;
-  }): Promise<ClientSettings> {
-    const res = await apiRequest<any>('/api/admin/settings', {
-      method: 'PUT',
-      body: JSON.stringify({
-        name: payload.name,
-        gcashNumber: payload.gcash_number,
-        gcashAccountName: payload.gcash_account_name,
-        paymentMethods: payload.payment_methods,
-        rcbcAccountName: payload.rcbc_account_name,
-        rcbcQrImage: payload.rcbc_qr_image,
-      }),
-    });
-    return normalizeClientSettings(res?.data ?? res);
-  },
+  name?: string;
+  gcash_number?: string;
+  gcash_account_name?: string;
+  payment_methods?: PaymentMethod[];
+  available_amenities?: AmenityItem[];
+  rcbc_account_name?: string;
+  rcbc_qr_image?: string;
+}): Promise<ClientSettings> {
+  const res = await apiRequest<any>('/api/admin/settings', {
+    method: 'PUT',
+    body: JSON.stringify({
+      name: payload.name,
+      gcashNumber: payload.gcash_number,
+      gcashAccountName: payload.gcash_account_name,
+      paymentMethods: payload.payment_methods,
+      availableAmenities: payload.available_amenities,
+      rcbcAccountName: payload.rcbc_account_name,
+      rcbcQrImage: payload.rcbc_qr_image,
+    }),
+  });
+  return normalizeClientSettings(res?.data ?? res);
+},
 
   async getBookings(filters?: {
     status?: BookingStatus;

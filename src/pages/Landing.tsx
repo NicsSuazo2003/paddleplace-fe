@@ -16,11 +16,6 @@ import {
   CloudSun,
   Users,
   UserCircle2,
-  Wifi,
-  Car,
-  Coffee,
-  Armchair,
-  Layers,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -30,7 +25,9 @@ import { Button } from '@/components/ui/Button';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useOpenPlayStore } from '@/stores/openPlayStore';
-import { COURT_IMAGES, APP_CONFIG } from '@/utils/constants';
+import { useClientStore } from '@/stores/clientStore';
+import { COURT_IMAGES, APP_CONFIG, DEFAULT_AMENITIES } from '@/utils/constants';
+import { getAmenityIconForItem } from '@/utils/amenityIcons';
 import {
   formatCurrency,
   todayISO,
@@ -38,7 +35,7 @@ import {
   toISODate,
   addDays,
 } from '@/utils/format';
-import type { TimeSlot, Court, OpenPlaySession } from '@/types';
+import type { TimeSlot, Court, OpenPlaySession, AmenityItem } from '@/types';
 
 const COURT_ACCENTS = [
   { header: 'text-[#115259]', dot: 'bg-[#115259]', border: 'border-[#115259]/30', bg: 'bg-[#F0F6F5]', text: 'text-[#115259]', hoverBorder: 'hover:border-[#115259]', hoverBg: 'hover:bg-[#E2EEEB]' },
@@ -95,7 +92,7 @@ function getImminenceLabel(session: OpenPlaySession): string | null {
     const sessionStart = new Date(`${session.date}T${session.start_time}`);
     const now = new Date();
     const diffMin = Math.round((sessionStart.getTime() - now.getTime()) / (1000 * 60));
-    if (diffMin <= -60) return null; // past
+    if (diffMin <= -60) return null;
     if (diffMin <= 0) return 'Happening now';
     if (diffMin <= 120) {
       const h = Math.floor(diffMin / 60);
@@ -142,6 +139,19 @@ export function Landing() {
     loadingSessions: loadingOpenPlay,
     loadUpcomingSessions,
   } = useOpenPlayStore();
+
+  // ✅ Customizable venue amenities (fall back to defaults if unset)
+  const availableAmenities = useClientStore((s) => s.settings?.available_amenities);
+  const loadClientSettings = useClientStore((s) => s.loadSettings);
+
+  useEffect(() => {
+    loadClientSettings();
+  }, [loadClientSettings]);
+
+  const amenities: AmenityItem[] =
+    availableAmenities && availableAmenities.length > 0
+      ? availableAmenities
+      : DEFAULT_AMENITIES;
 
   const [weekOffset, setWeekOffset] = useState(0);
   const [bookingMode, setBookingMode] = useState<BookingMode>('private');
@@ -286,8 +296,6 @@ export function Landing() {
       `${a.start_time}`.localeCompare(`${b.start_time}`)
     );
 
-  const hasNoSlotsForPeriod = (times: { start_time: string }[]) => times.length === 0;
-
   return (
     <div className="min-h-screen bg-[#F8FAF9] text-[#162422]">
       <Navbar />
@@ -393,9 +401,10 @@ export function Landing() {
               </div>
             </div>
 
+            {/* Hero chips — hardcoded marketing copy */}
             <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
-                <Layers className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
                 <span>Silica Sand Court</span>
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-semibold text-[#B6DAC8] backdrop-blur-md">
@@ -403,20 +412,8 @@ export function Landing() {
                 <span>Paddle Rental ₱30/hr</span>
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                <Coffee className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
                 <span>In-House Cafe & CR</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                <Car className="h-3.5 w-3.5 text-[#B6DAC8]" />
-                <span>Own Parking</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                <Wifi className="h-3.5 w-3.5 text-[#B6DAC8]" />
-                <span>Piso Wi-Fi</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-                <Armchair className="h-3.5 w-3.5 text-[#B6DAC8]" />
-                <span>Shaded Waiting Area</span>
               </span>
             </div>
           </motion.div>
@@ -927,18 +924,11 @@ export function Landing() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-6">
-            {[
-              { icon: Layers, title: 'Silica Sand Finish', desc: 'Consistent ball bounce & optimal joint-safe traction' },
-              { icon: Sparkles, title: 'Paddle Rental', desc: '₱30 / hour — quality gear available on-site' },
-              { icon: Coffee, title: 'In-House Cafe', desc: 'Refreshments, drinks, and snacks right beside the court' },
-              { icon: Car, title: 'Dedicated Parking', desc: 'Private, secure parking area for cars & motorcycles' },
-              { icon: Armchair, title: 'Shaded Waiting Area', desc: 'Comfortable covered benches while waiting for your slot' },
-              { icon: Wifi, title: 'Piso Wi-Fi & Restroom', desc: 'Stay connected and enjoy clean, private comfort rooms' },
-            ].map((item, idx) => {
-              const Icon = item.icon;
+            {amenities.map((amenity, idx) => {
+              const Icon = getAmenityIconForItem(amenity);
               return (
                 <motion.div
-                  key={item.title}
+                  key={`${amenity.name}-${idx}`}
                   initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
@@ -949,11 +939,13 @@ export function Landing() {
                     <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="font-display text-xs font-bold text-[#162422] sm:text-sm">
-                    {item.title}
+                    {amenity.name}
                   </h3>
-                  <p className="mt-1 text-[11px] leading-snug text-[#526E69]">
-                    {item.desc}
-                  </p>
+                  {amenity.description && (
+                    <p className="mt-1 text-[11px] leading-snug text-[#526E69]">
+                      {amenity.description}
+                    </p>
+                  )}
                 </motion.div>
               );
             })}
@@ -1327,6 +1319,7 @@ function OpenPlayPill({
     </button>
   );
 }
+
 function SlotPill({
   slot,
   isSelected,

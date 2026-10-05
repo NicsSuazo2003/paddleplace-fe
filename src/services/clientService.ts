@@ -11,7 +11,8 @@ function normalizeClientSettings(raw: any): ClientSettings {
     accent_color: raw.accentColor ?? raw.accent_color,
     gcash_number: raw.gcashNumber ?? raw.gcash_number ?? null,
     gcash_account_name: raw.gcashAccountName ?? raw.gcash_account_name ?? null,
-    payment_methods: raw.paymentMethods ?? raw.payment_methods ?? [],  // ← still missing here
+    payment_methods: raw.paymentMethods ?? raw.payment_methods ?? [],
+    available_amenities: raw.availableAmenities ?? raw.available_amenities ?? [],
   };
 }
 

@@ -19,6 +19,7 @@ import {
   Edit3,
   Image as ImageIcon,
   Loader2,
+  Sparkles,
 } from 'lucide-react';
 
 import { AdminLayout } from '@/components/layout/AdminLayout';
@@ -36,9 +37,13 @@ import {
   addDays,
 } from '@/utils/format';
 import { APP_CONFIG } from '@/utils/constants';
-import type { ClientSettings, PaymentMethod } from '@/types';
+import type { ClientSettings, PaymentMethod, AmenityItem } from '@/types';
 import { StaffManagement } from '@/components/ui/StaffManagement';
 import { Modal } from '@/components/ui/Modal';
+import {
+  LUCIDE_ICON_OPTIONS,
+  getAmenityIconForItem,
+} from '@/utils/amenityIcons';
 
 const PAYMENT_TYPE_OPTIONS = [
   { value: 'gcash', label: 'GCash', icon: '📱' },
@@ -109,6 +114,20 @@ export function Settings() {
     text: string;
   } | null>(null);
 
+  // ─── Venue Amenities ───
+  const [amenities, setAmenities] = useState<AmenityItem[]>([]);
+  const [editingAmenityIdx, setEditingAmenityIdx] = useState<number | null>(null);
+  const [draftAmenity, setDraftAmenity] = useState<AmenityItem>({
+    name: '',
+    icon: 'Sparkles',
+    description: '',
+  });
+  const [savingAmenities, setSavingAmenities] = useState(false);
+  const [amenitiesMsg, setAmenitiesMsg] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
+
   const [uploadingQR, setUploadingQR] = useState(false);
 
   const [formData, setFormData] = useState<Partial<PaymentMethod>>({
@@ -137,6 +156,7 @@ export function Settings() {
       try {
         const settings = await adminService.getSettings();
         setClientSettings(settings);
+        setAmenities(settings.available_amenities ?? []);
       } catch (err) {
         console.error('Failed to load client settings:', err);
       } finally {
@@ -454,6 +474,86 @@ export function Settings() {
     }
   };
 
+  // ─── Venue Amenities handlers ───
+  const resetDraftAmenity = () => {
+    setDraftAmenity({ name: '', icon: 'Sparkles', description: '' });
+  };
+
+  const addAmenity = () => {
+    const trimmed = draftAmenity.name.trim();
+
+    if (!trimmed) {
+      setAmenitiesMsg({ type: 'error', text: 'Amenity name is required.' });
+      return;
+    }
+
+    if (trimmed.includes(',')) {
+      setAmenitiesMsg({
+        type: 'error',
+        text: 'Amenity names cannot contain commas.',
+      });
+      return;
+    }
+
+    if (amenities.some((a) => a.name.toLowerCase() === trimmed.toLowerCase())) {
+      setAmenitiesMsg({
+        type: 'error',
+        text: `"${trimmed}" is already in the list.`,
+      });
+      return;
+    }
+
+    setAmenities([
+      ...amenities,
+      {
+        name: trimmed,
+        icon: draftAmenity.icon || 'Sparkles',
+        description: (draftAmenity.description ?? '').trim(),
+      },
+    ]);
+    resetDraftAmenity();
+    setAmenitiesMsg(null);
+  };
+
+  const updateAmenity = (idx: number, patch: Partial<AmenityItem>) => {
+    setAmenities(amenities.map((a, i) => (i === idx ? { ...a, ...patch } : a)));
+  };
+
+  const removeAmenity = (idx: number) => {
+    const amenity = amenities[idx];
+    if (!amenity) return;
+
+    const affected = courts.filter((c) => c.amenities?.includes(amenity.name));
+
+    if (affected.length > 0) {
+      const confirmed = window.confirm(
+        `Remove "${amenity.name}"?\n\nIt's currently assigned to ${affected.length} court${affected.length === 1 ? '' : 's'}. Removing it from the master list will also remove it from those courts when you save.`
+      );
+      if (!confirmed) return;
+    }
+
+    setAmenities(amenities.filter((_, i) => i !== idx));
+    if (editingAmenityIdx === idx) setEditingAmenityIdx(null);
+    setAmenitiesMsg(null);
+  };
+
+  const saveAmenities = async () => {
+    setSavingAmenities(true);
+    setAmenitiesMsg(null);
+    try {
+      await adminService.updateSettings({ available_amenities: amenities });
+      setAmenitiesMsg({ type: 'success', text: 'Amenities saved.' });
+      await loadCourts();
+    } catch (err) {
+      setAmenitiesMsg({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to save amenities.',
+      });
+    } finally {
+      setSavingAmenities(false);
+    }
+  };
+
   const filteredBlocked = selectedCourtId
     ? blockedDates.filter((b) => b.court_id === selectedCourtId)
     : blockedDates;
@@ -588,6 +688,246 @@ export function Settings() {
                 </Button>
               </div>
             </div>
+
+            {/* Venue Amenities */}
+            {isAdmin && (
+              <div className="card rounded-2xl border border-forest-700/80 bg-forest-900/80 p-5 shadow-xl backdrop-blur-sm sm:p-6">
+                <div className="mb-4">
+                  <h2 className="flex items-center gap-2 font-display text-base font-bold text-cream sm:text-lg">
+                    <Sparkles className="h-5 w-5 text-brand-blue-300" />
+                    Venue Amenities
+                  </h2>
+                  <p className="mt-0.5 text-xs text-cream-muted sm:text-sm">
+                    Master list of amenities shown on the public landing page. Pick an icon and
+                    add a short description for each — descriptions only appear on the landing page.
+                  </p>
+                </div>
+
+                {amenities.length === 0 ? (
+                  <div className="rounded-xl border border-forest-700/80 bg-forest-950/60 py-8 text-center">
+                    <Sparkles className="mx-auto h-10 w-10 text-cream-muted/30" />
+                    <p className="mt-3 text-sm font-semibold text-cream-muted">
+                      No amenities yet.
+                    </p>
+                    <p className="mt-0.5 text-xs text-cream-muted/70">
+                      Add your first one below.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {amenities.map((amenity, idx) => {
+                      const Icon = getAmenityIconForItem(amenity);
+                      const isEditing = editingAmenityIdx === idx;
+
+                      return (
+                        <div
+                          key={`${amenity.name}-${idx}`}
+                          className="rounded-xl border border-forest-700/80 bg-forest-950/70 p-3"
+                        >
+                          {isEditing ? (
+                            <div className="space-y-3">
+                              <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+                                <Input
+                                  label="Name"
+                                  value={amenity.name}
+                                  onChange={(e) =>
+                                    updateAmenity(idx, { name: e.target.value })
+                                  }
+                                />
+                                <div>
+                                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-cream-muted">
+                                    Icon
+                                  </label>
+                                  <select
+                                    value={amenity.icon}
+                                    onChange={(e) =>
+                                      updateAmenity(idx, { icon: e.target.value })
+                                    }
+                                    className="w-full rounded-xl border border-forest-700/80 bg-forest-950/70 px-3.5 py-2.5 text-sm text-cream transition focus:border-brand-blue-400 focus:outline-none focus:ring-2 focus:ring-brand-blue-500/20"
+                                  >
+                                    {LUCIDE_ICON_OPTIONS.map((opt) => (
+                                      <option
+                                        key={opt.value}
+                                        value={opt.value}
+                                        className="bg-forest-900"
+                                      >
+                                        {opt.label}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </div>
+
+                              <Textarea
+                                label="Description (landing page only)"
+                                rows={2}
+                                placeholder="e.g. Pro-grade silica surface, low dust, all-weather"
+                                value={amenity.description ?? ''}
+                                onChange={(e) =>
+                                  updateAmenity(idx, { description: e.target.value })
+                                }
+                              />
+
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingAmenityIdx(null)}
+                                >
+                                  Done
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  leftIcon={<Trash2 className="h-4 w-4" />}
+                                  onClick={() => removeAmenity(idx)}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-brand-blue-400/30 bg-brand-blue-500/15 text-brand-blue-300">
+                                <Icon className="h-5 w-5" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-bold text-cream">
+                                  {amenity.name}
+                                </p>
+                                {amenity.description ? (
+                                  <p className="truncate text-xs text-cream-muted">
+                                    {amenity.description}
+                                  </p>
+                                ) : (
+                                  <p className="truncate text-xs italic text-cream-muted/50">
+                                    No description yet
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingAmenityIdx(idx)}
+                                  className="rounded-lg border border-forest-600 bg-forest-800/80 p-2 text-cream-muted transition hover:border-brand-blue-400 hover:text-brand-blue-300 active:scale-95"
+                                  title="Edit"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAmenity(idx)}
+                                  className="rounded-lg border border-forest-600 bg-forest-800/80 p-2 text-cream-muted transition hover:border-error hover:text-error active:scale-95"
+                                  title="Remove"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Add new amenity */}
+                <div className="mt-4 space-y-3 rounded-xl border border-dashed border-forest-700/80 bg-forest-950/40 p-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand-blue-300">
+                    Add new amenity
+                  </p>
+
+                  <div className="grid gap-3 sm:grid-cols-[1fr_200px]">
+                    <Input
+                      label="Name"
+                      placeholder="e.g. Air Conditioned, Lockers, Pro Shop"
+                      value={draftAmenity.name}
+                      onChange={(e) =>
+                        setDraftAmenity({ ...draftAmenity, name: e.target.value })
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addAmenity();
+                        }
+                      }}
+                    />
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-cream-muted">
+                        Icon
+                      </label>
+                      <select
+                        value={draftAmenity.icon}
+                        onChange={(e) =>
+                          setDraftAmenity({ ...draftAmenity, icon: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-forest-700/80 bg-forest-950/70 px-3.5 py-2.5 text-sm text-cream transition focus:border-brand-blue-400 focus:outline-none focus:ring-2 focus:ring-brand-blue-500/20"
+                      >
+                        {LUCIDE_ICON_OPTIONS.map((opt) => (
+                          <option
+                            key={opt.value}
+                            value={opt.value}
+                            className="bg-forest-900"
+                          >
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <Textarea
+                    label="Description (landing page only)"
+                    rows={2}
+                    placeholder="e.g. Pro-grade silica surface, low dust, all-weather"
+                    value={draftAmenity.description ?? ''}
+                    onChange={(e) =>
+                      setDraftAmenity({ ...draftAmenity, description: e.target.value })
+                    }
+                  />
+
+                  <div className="flex justify-end">
+                    <Button
+                      size="sm"
+                      type="button"
+                      onClick={addAmenity}
+                      disabled={!draftAmenity.name.trim()}
+                      leftIcon={<Plus className="h-4 w-4" />}
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+
+                {amenitiesMsg && (
+                  <div
+                    className={`mt-3 flex items-center gap-2 rounded-xl border p-3 text-xs font-semibold ${
+                      amenitiesMsg.type === 'success'
+                        ? 'border-mint-400/40 bg-mint-500/15 text-mint-300'
+                        : 'border-error/40 bg-error/15 text-error'
+                    }`}
+                  >
+                    {amenitiesMsg.type === 'success' ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 shrink-0" />
+                    )}
+                    {amenitiesMsg.text}
+                  </div>
+                )}
+
+                <div className="mt-4 flex justify-end border-t border-forest-700/80 pt-4">
+                  <Button
+                    size="md"
+                    isLoading={savingAmenities}
+                    leftIcon={<Save className="h-4 w-4" />}
+                    onClick={saveAmenities}
+                  >
+                    Save Amenities
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Payment Methods */}
             {isAdmin && (

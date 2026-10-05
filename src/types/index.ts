@@ -148,6 +148,12 @@ export interface AdminUser {
   status?: string;
 }
 
+export interface AmenityItem {
+  name: string;
+  icon: string;
+  description?: string;
+}
+
 export interface ClientSettings {
   id: string;
   name: string;
@@ -158,9 +164,10 @@ export interface ClientSettings {
   gcash_number?: string | null;
   gcash_account_name?: string | null;
   payment_methods?: PaymentMethod[];
+  available_amenities?: AmenityItem[];
   contact_phone?: string | null;
-contact_email?: string | null;
-contact_viber?: string | null;
+  contact_email?: string | null;
+  contact_viber?: string | null;
 }
 
 export type AdminView = 'calendar' | 'list';
