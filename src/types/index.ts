@@ -252,3 +252,24 @@ export interface BookingSummary {
   total_amount: number;
   created_at: string;
 }
+// ✅ Reschedule feature — request payload for the admin endpoint
+export interface RescheduleBookingPayload {
+  court_id?: string;       // omit to keep current court
+  date?: string;           // omit to keep current date (YYYY-MM-DD)
+  slots: { start_time: string; end_time: string }[];
+  reason?: string;
+  staff_notes?: string;
+}
+
+// ✅ Reschedule feature — response wrapper with delta info
+export interface RescheduleBookingResult {
+  booking: Booking;
+  previous_slots: BookingSlotItem[];
+  previous_date: string;
+  previous_court_id: string;
+  previous_court_name: string;
+  previous_total_amount: number;
+  new_total_amount: number;
+  balance_due: number;     // positive = customer owes more
+  refund_due: number;      // positive = customer is owed a refund
+}

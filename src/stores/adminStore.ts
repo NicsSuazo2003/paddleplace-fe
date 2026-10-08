@@ -1,5 +1,8 @@
 import { create } from 'zustand';
-import type { Analytics, Booking, BookingStatus, Court, BlockedDate, PaymentMethod } from '@/types';
+import type {
+  Analytics, Booking, BookingStatus, Court, BlockedDate, PaymentMethod,
+  RescheduleBookingPayload, RescheduleBookingResult,
+} from '@/types';
 import { adminService } from '@/services/adminService';
 
 export interface ManualBookingPayload {
@@ -37,6 +40,10 @@ interface AdminStoreState {
   }) => Promise<void>;
   updateBookingStatus: (bookingId: string, status: BookingStatus) => Promise<void>;
   createManualBooking: (payload: ManualBookingPayload) => Promise<Booking>;
+  rescheduleBooking: (
+    bookingId: string,
+    payload: RescheduleBookingPayload
+  ) => Promise<RescheduleBookingResult>;
   loadCourts: () => Promise<void>;
   updateCourt: (court: Court) => Promise<void>;
   createCourt: (court: Partial<Court>) => Promise<Court>;
@@ -106,6 +113,24 @@ export const useAdminStore = create<AdminStoreState>((set, get) => ({
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Failed to create booking',
+      });
+      throw err;
+    }
+  },
+
+  // ✅ NEW — move a booking to a different court / date / time
+  rescheduleBooking: async (bookingId, payload) => {
+    try {
+      const result = await adminService.rescheduleBooking(bookingId, payload);
+      set((state) => ({
+        bookings: state.bookings.map((b) =>
+          b.id === bookingId ? result.booking : b
+        ),
+      }));
+      return result;
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to reschedule booking',
       });
       throw err;
     }

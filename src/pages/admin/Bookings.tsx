@@ -19,8 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
+  CalendarClock,
 } from 'lucide-react';
 import { StaffCreateBookingModal } from './StaffCreateBookingModal';
+import { RescheduleBookingModal } from './RescheduleBookingModal';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { StaffLayout } from '@/components/layout/StaffLayout';
 import { Button } from '@/components/ui/Button';
@@ -36,7 +38,7 @@ import {
   formatDateTime,
   formatSlotsSummary,
 } from '@/utils/format';
-import type { Booking, BookingStatus } from '@/types';
+import type { Booking, BookingStatus, RescheduleBookingResult } from '@/types';
 
 /* ────────────────────────────────────────────────────────────────────────── */
 /* Config                                                                     */
@@ -72,29 +74,19 @@ type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger';
 interface ActionDef {
   to: BookingStatus;
   label: string;
-  /** One-line explanation shown under the button so the outcome is never a guess. */
   helper: string;
   variant: ButtonVariant;
   icon?: ReactNode;
-  /** When set, a confirmation dialog is shown before the change is applied. */
   confirm?: {
     title: string;
     message: string;
     confirmLabel: string;
-    /** Ask for a reason (optional) – useful for customer-facing outcomes. */
     askReason?: boolean;
   };
-  /** Only admins can run this action. */
   adminOnly?: boolean;
-  /** Only allow once the booking date has arrived. */
   requiresStarted?: boolean;
 }
 
-/**
- * Single source of truth for allowed status transitions.
- * Order = primary/positive action first, destructive actions last.
- * (Keep the server in sync – never rely on the UI alone to enforce these.)
- */
 const ACTIONS: Partial<Record<BookingStatus, ActionDef[]>> = {
   pending_payment: [
     {
@@ -228,10 +220,6 @@ const ACTIONS: Partial<Record<BookingStatus, ActionDef[]>> = {
 
 const TERMINAL_STATUSES: BookingStatus[] = ['cancelled', 'rejected', 'expired', 'refunded'];
 
-/**
- * Optional fields your API may already return. They are read defensively –
- * the UI simply hides them when the backend doesn't provide them.
- */
 type BookingExtras = {
   payment_deadline?: string | null;
   expires_at?: string | null;
@@ -297,6 +285,12 @@ export function Bookings() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<BookingStatus | null>(null);
 
+  // ✅ NEW — reschedule flow
+  const [rescheduleTarget, setRescheduleTarget] = useState<Booking | null>(null);
+  const [pendingAdjustments, setPendingAdjustments] = useState<
+    Record<string, { balance_due: number; refund_due: number }>
+  >({});
+
   const [pendingAction, setPendingAction] = useState<{ booking: Booking; action: ActionDef } | null>(
     null
   );
@@ -322,7 +316,6 @@ export function Bookings() {
 
   useEffect(() => {
     fetchBookings();
-    // Courts are only needed for the court filter, which only admins see.
     if (isAdmin) loadCourts();
   }, [fetchBookings, loadCourts, isAdmin]);
 
@@ -347,7 +340,6 @@ export function Bookings() {
     return counts;
   }, [bookings]);
 
-  // Land on "Needs review" the first time data arrives, if there is work waiting.
   useEffect(() => {
     if (defaultTabApplied.current || loadingBookings || bookings.length === 0) return;
     defaultTabApplied.current = true;
@@ -413,9 +405,6 @@ export function Bookings() {
   const handleStatusUpdate = async (booking: Booking, status: BookingStatus, why?: string) => {
     setUpdatingStatus(status);
     try {
-      // `reason` is passed as an optional 3rd argument. If your store's
-      // updateBookingStatus only accepts (id, status), add the param there
-      // (and persist it + email the customer) – the UI is already wired.
       await (
         updateBookingStatus as unknown as (
           id: string,
@@ -439,7 +428,6 @@ export function Bookings() {
           ? `Couldn't update booking: ${msg}`
           : "Couldn't update booking. It may have been changed by someone else — refreshing the list.",
       });
-      // Pull fresh data so a stale status doesn't mislead the next click.
       fetchBookings();
     } finally {
       setUpdatingStatus(null);
@@ -477,6 +465,33 @@ export function Bookings() {
   const openDetails = (b: Booking) => {
     setCopied(false);
     setSelectedBooking(b);
+  };
+
+  // ✅ NEW — open the reschedule modal (closes the details modal first so
+  //          they never stack; the reschedule modal shows its own summary)
+  const openReschedule = (b: Booking) => {
+    setSelectedBooking(null);
+    setRescheduleTarget(b);
+  };
+
+  // ✅ NEW — remember the delta so the row can show a persistent badge
+  const handleRescheduled = async (result: RescheduleBookingResult) => {
+    if (result.balance_due > 0 || result.refund_due > 0) {
+      setPendingAdjustments((prev) => ({
+        ...prev,
+        [result.booking.id]: {
+          balance_due: result.balance_due,
+          refund_due: result.refund_due,
+        },
+      }));
+    }
+
+    setToast({
+      type: 'success',
+      message: `Booking ${result.booking.reference_code} rescheduled.`,
+    });
+
+    await fetchBookings();
   };
 
   /* ── Derived for modal ────────────────────────────────────────────────── */
@@ -585,7 +600,6 @@ export function Bookings() {
                 </option>
               ))}
             </select>
-            {/* Court filter is admin-only: staff never load the court list. */}
             {isAdmin && (
               <select
                 aria-label="Filter by court"
@@ -683,6 +697,7 @@ export function Bookings() {
                 <tbody className="divide-y divide-forest-800/80">
                   {pageItems.map((b) => {
                     const needsReview = b.status === 'payment_submitted';
+                    const adjust = pendingAdjustments[b.id];
                     return (
                       <tr
                         key={b.id}
@@ -692,9 +707,23 @@ export function Bookings() {
                         }`}
                       >
                         <td className="px-4 py-3.5">
-                          <span className="font-mono font-bold text-brand-blue-300 tracking-wide">
-                            {b.reference_code || 'N/A'}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-mono font-bold text-brand-blue-300 tracking-wide">
+                              {b.reference_code || 'N/A'}
+                            </span>
+                            {adjust?.refund_due > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200">
+                                <RotateCcw className="h-3 w-3" />
+                                Refund {formatCurrency(adjust.refund_due)}
+                              </span>
+                            )}
+                            {adjust?.balance_due > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
+                                <AlertTriangle className="h-3 w-3" />
+                                Balance {formatCurrency(adjust.balance_due)}
+                              </span>
+                            )}
+                          </div>
                           {b.payment_reference && (
                             <p className="mt-0.5 text-[11px] text-cream-muted">
                               Pay ref:{' '}
@@ -768,6 +797,7 @@ export function Bookings() {
               </button>
               {pageItems.map((b) => {
                 const needsReview = b.status === 'payment_submitted';
+                const adjust = pendingAdjustments[b.id];
                 return (
                   <div
                     key={b.id}
@@ -781,6 +811,25 @@ export function Bookings() {
                       </span>
                       <StatusBadge status={b.status} size="sm" />
                     </div>
+
+                    {/* ✅ NEW — pending adjustment badges */}
+                    {(adjust?.refund_due > 0 || adjust?.balance_due > 0) && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {adjust?.refund_due > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-purple-500/40 bg-purple-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-200">
+                            <RotateCcw className="h-3 w-3" />
+                            Refund {formatCurrency(adjust.refund_due)}
+                          </span>
+                        )}
+                        {adjust?.balance_due > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-200">
+                            <AlertTriangle className="h-3 w-3" />
+                            Balance {formatCurrency(adjust.balance_due)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <p className="text-sm font-bold text-cream">{b.customer?.name || 'Unknown'}</p>
                       {b.customer?.email && (
@@ -872,7 +921,6 @@ export function Bookings() {
                 </span>
               </div>
 
-              {/* Audit trail (shown when the API provides it) */}
               {extra?.status_updated_at && (
                 <p className="rounded-lg border border-forest-800 bg-forest-900/60 px-3 py-2 text-xs text-cream-muted">
                   Last changed {extra.status_updated_by ? `by ${extra.status_updated_by} ` : ''}
@@ -932,7 +980,6 @@ export function Bookings() {
                 </div>
               </div>
 
-              {/* Total Summary */}
               <div className="flex items-center justify-between rounded-xl border border-brand-blue-500/40 bg-brand-blue-500/15 p-4">
                 <span className="text-xs font-semibold uppercase tracking-wider text-cream-muted">
                   {selectedBooking.status === 'payment_submitted'
@@ -944,7 +991,6 @@ export function Bookings() {
                 </span>
               </div>
 
-              {/* Payment Details */}
               <div className="rounded-xl border border-forest-700/80 bg-forest-950/70 p-4">
                 <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-brand-blue-300">
                   Payment Details
@@ -1017,11 +1063,24 @@ export function Bookings() {
                 )}
               </div>
 
-              {/* Context-aware actions – sticky so they're never below the fold */}
               <div className="sticky bottom-0 -mx-1 border-t border-forest-700/80 bg-forest-900 px-1 pb-1 pt-4">
                 <p className="mb-3 text-xs font-bold uppercase tracking-wider text-cream-muted">
                   Actions
                 </p>
+
+                {/* ✅ NEW — Reschedule entry point, shown for non-terminal statuses */}
+                {!TERMINAL_STATUSES.includes(selectedBooking.status) && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="mb-3 w-full sm:w-auto"
+                    leftIcon={<CalendarClock className="h-4 w-4" />}
+                    onClick={() => openReschedule(selectedBooking)}
+                    disabled={updatingStatus !== null}
+                  >
+                    Reschedule booking
+                  </Button>
+                )}
 
                 {modalActions.length > 0 && (
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -1192,6 +1251,14 @@ export function Bookings() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onCreated={() => fetchBookings()}
+      />
+
+      {/* ✅ NEW — Reschedule modal */}
+      <RescheduleBookingModal
+        isOpen={!!rescheduleTarget}
+        booking={rescheduleTarget}
+        onClose={() => setRescheduleTarget(null)}
+        onRescheduled={handleRescheduled}
       />
     </Layout>
   );

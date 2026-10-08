@@ -174,15 +174,30 @@ export const courtService = {
     }
   },
 
-  async getAvailability(courtId: string, date: string): Promise<TimeSlot[]> {
+  // ✅ UPDATED — accepts an optional excludeBookingId so the reschedule
+  //    modal can see the booking's own current slots as selectable.
+  async getAvailability(
+    courtId: string,
+    date: string,
+    excludeBookingId?: string
+  ): Promise<TimeSlot[]> {
     if (USE_MOCK_DATA) {
       console.warn('🔧 Using mock slot data (development mode)');
       return generateMockSlots(courtId, date);
     }
 
     try {
-      console.log(`📡 Fetching availability for court ${courtId} on ${date}...`);
-      const res = await apiRequest<any>(`/api/courts/${courtId}/availability?date=${date}`);
+      const params = new URLSearchParams({ date });
+      if (excludeBookingId) params.set('excludeBookingId', excludeBookingId);
+
+      console.log(
+        `📡 Fetching availability for court ${courtId} on ${date}` +
+          (excludeBookingId ? ` (excluding booking ${excludeBookingId})` : '') +
+          '...'
+      );
+      const res = await apiRequest<any>(
+        `/api/courts/${courtId}/availability?${params.toString()}`
+      );
       console.log('📡 Availability response:', res);
 
       const rawList = Array.isArray(res) ? res : res?.data || res?.slots || [];

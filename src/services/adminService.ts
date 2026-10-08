@@ -1,9 +1,11 @@
 import type {
   Analytics, Booking, BookingStatus, Court, BlockedDate,
   ClientSettings, PaymentMethod, AmenityItem,
+  RescheduleBookingPayload, RescheduleBookingResult,
 } from '@/types';
 import { apiRequest } from './api';
 import { normalizeCourt, buildCourtPayload } from './courtService';
+
 
 function normalizeClientSettings(raw: any): ClientSettings {
   const data = raw?.data ?? raw;
@@ -89,7 +91,12 @@ function normalizeBooking(raw: any): Booking {
     payment_reference: data.paymentReference ?? data.payment_reference ?? '',
     gcash_number: data.gcashNumber ?? data.gcash_number ?? '',
     created_at: data.createdAt ?? data.created_at ?? new Date().toISOString(),
-    updated_at: data.updatedAt ?? data.updated_at ?? data.createdAt ?? data.created_at ?? new Date().toISOString(),
+    updated_at:
+      data.updatedAt ??
+      data.updated_at ??
+      data.createdAt ??
+      data.created_at ??
+      new Date().toISOString(),
   };
 }
 
@@ -105,28 +112,28 @@ export const adminService = {
   },
 
   async updateSettings(payload: {
-  name?: string;
-  gcash_number?: string;
-  gcash_account_name?: string;
-  payment_methods?: PaymentMethod[];
-  available_amenities?: AmenityItem[];
-  rcbc_account_name?: string;
-  rcbc_qr_image?: string;
-}): Promise<ClientSettings> {
-  const res = await apiRequest<any>('/api/admin/settings', {
-    method: 'PUT',
-    body: JSON.stringify({
-      name: payload.name,
-      gcashNumber: payload.gcash_number,
-      gcashAccountName: payload.gcash_account_name,
-      paymentMethods: payload.payment_methods,
-      availableAmenities: payload.available_amenities,
-      rcbcAccountName: payload.rcbc_account_name,
-      rcbcQrImage: payload.rcbc_qr_image,
-    }),
-  });
-  return normalizeClientSettings(res?.data ?? res);
-},
+    name?: string;
+    gcash_number?: string;
+    gcash_account_name?: string;
+    payment_methods?: PaymentMethod[];
+    available_amenities?: AmenityItem[];
+    rcbc_account_name?: string;
+    rcbc_qr_image?: string;
+  }): Promise<ClientSettings> {
+    const res = await apiRequest<any>('/api/admin/settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: payload.name,
+        gcashNumber: payload.gcash_number,
+        gcashAccountName: payload.gcash_account_name,
+        paymentMethods: payload.payment_methods,
+        availableAmenities: payload.available_amenities,
+        rcbcAccountName: payload.rcbc_account_name,
+        rcbcQrImage: payload.rcbc_qr_image,
+      }),
+    });
+    return normalizeClientSettings(res?.data ?? res);
+  },
 
   async getBookings(filters?: {
     status?: BookingStatus;
@@ -169,10 +176,8 @@ export const adminService = {
     return normalizeCourt(updated);
   },
 
-  // ✅ NEW: create a court via POST /api/admin/courts
   async createCourt(court: Partial<Court>): Promise<Court> {
     const payload = buildCourtPayload(court as Court);
-    // Server generates the id — don't send our empty placeholder
     delete payload.id;
     const res = await apiRequest<any>('/api/admin/courts', {
       method: 'POST',
@@ -182,7 +187,6 @@ export const adminService = {
     return normalizeCourt(created);
   },
 
-  // ✅ NEW: delete a court via DELETE /api/admin/courts/{id}
   async deleteCourt(id: string): Promise<void> {
     await apiRequest<void>(`/api/admin/courts/${id}`, {
       method: 'DELETE',
@@ -306,5 +310,50 @@ export const adminService = {
       }),
     });
     return normalizeBooking(res?.data ?? res);
+  },
+
+  // ✅ Move an existing booking to a different court / date / time
+  async rescheduleBooking(
+    bookingId: string,
+    payload: RescheduleBookingPayload
+  ): Promise<RescheduleBookingResult> {
+    const res = await apiRequest<any>(`/api/admin/bookings/${bookingId}/reschedule`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        courtId: payload.court_id ?? null,
+        date: payload.date ?? null,
+        slots: payload.slots.map((s) => ({
+          startTime: s.start_time,
+          endTime: s.end_time,
+        })),
+        reason: payload.reason ?? null,
+        staffNotes: payload.staff_notes ?? null,
+      }),
+    });
+
+    const data = res?.data ?? res;
+
+    return {
+      booking: normalizeBooking(data.booking ?? data.Booking ?? data),
+      previous_slots: (data.previousSlots ?? data.previous_slots ?? []).map((s: any) => ({
+        id: s.id || '',
+        slot_id: s.slotId ?? s.slot_id ?? s.id ?? '',
+        start_time: s.startTime ?? s.start_time ?? '',
+        end_time: s.endTime ?? s.end_time ?? '',
+        date: s.date ?? '',
+        type: s.type ?? 'standard',
+        price: Number(s.price ?? 0),
+        is_peak: s.isPeak ?? s.is_peak ?? false,
+      })),
+      previous_date: data.previousDate ?? data.previous_date ?? '',
+      previous_court_id: data.previousCourtId ?? data.previous_court_id ?? '',
+      previous_court_name: data.previousCourtName ?? data.previous_court_name ?? '',
+      previous_total_amount: Number(
+        data.previousTotalAmount ?? data.previous_total_amount ?? 0
+      ),
+      new_total_amount: Number(data.newTotalAmount ?? data.new_total_amount ?? 0),
+      balance_due: Number(data.balanceDue ?? data.balance_due ?? 0),
+      refund_due: Number(data.refundDue ?? data.refund_due ?? 0),
+    };
   },
 };
