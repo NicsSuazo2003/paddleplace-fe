@@ -1,6 +1,6 @@
 // src/pages/admin/StaffCreateBookingModal.tsx
 import { useEffect, useState } from 'react';
-import { AlertCircle, Check, Loader2 } from 'lucide-react';
+import { AlertCircle, Check, Loader2, Lock } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
@@ -68,8 +68,11 @@ export function StaffCreateBookingModal({ isOpen, onClose, onCreated }: Props) {
 
     (async () => {
       try {
+        // ✅ Keep ALL slots — we render unavailable ones as disabled/greyed,
+        // so the user can see *why* a slot can't be picked instead of
+        // wondering why it silently vanished.
         const result = await courtService.getAvailability(courtId, date);
-        if (!cancelled) setSlots(result.filter((s) => s.is_available));
+        if (!cancelled) setSlots(result);
       } catch {
         if (!cancelled) setSlots([]);
       } finally {
@@ -108,6 +111,8 @@ export function StaffCreateBookingModal({ isOpen, onClose, onCreated }: Props) {
     );
   };
 
+  // Only available slots contribute to the amount / selection
+  const availableSlots = slots.filter((s) => s.is_available);
   const selectedSlots = slots.filter((s) => selectedSlotIds.includes(s.id));
   const autoAmount = selectedSlots.reduce((sum, s) => sum + s.price, 0);
   const effectiveAmount = amountOverride.trim() === '' ? autoAmount : Number(amountOverride) || 0;
@@ -187,7 +192,7 @@ export function StaffCreateBookingModal({ isOpen, onClose, onCreated }: Props) {
         <div>
           <label className="mb-1.5 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-cream-muted">
             <span>
-              Available Slots *{' '}
+              Time Slots *{' '}
               {loadingSlots && <Loader2 className="ml-1.5 inline h-3.5 w-3.5 animate-spin text-brand-blue-300" />}
             </span>
             {selectedSlotIds.length > 0 && (
@@ -203,33 +208,73 @@ export function StaffCreateBookingModal({ isOpen, onClose, onCreated }: Props) {
             </div>
           ) : slots.length === 0 ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs font-medium text-amber-300">
-              No available slots for this court on the selected date.
+              No slots for this court on the selected date.
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {slots.map((slot) => {
-                const selected = selectedSlotIds.includes(slot.id);
-                return (
-                  <button
-                    key={slot.id}
-                    type="button"
-                    onClick={() => toggleSlot(slot.id)}
-                    className={`rounded-xl border p-2.5 text-center text-xs transition ${
-                      selected
-                        ? 'border-brand-blue-400 bg-brand-blue-500 text-white shadow-glow-blue font-bold'
-                        : 'border-forest-700/80 bg-forest-950/60 text-cream-muted hover:border-brand-blue-400/50 hover:text-cream'
-                    }`}
-                  >
-                    <span className="font-mono block">
-                      {formatTimeRange(slot.start_time, slot.end_time)}
-                    </span>
-                    <span className="block text-[10px] opacity-75 mt-0.5">
-                      {formatCurrency(slot.price)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {slots.map((slot) => {
+                  const selected = selectedSlotIds.includes(slot.id);
+                  const unavailable = !slot.is_available;
+
+                  return (
+                    <button
+                      key={slot.id}
+                      type="button"
+                      disabled={unavailable}
+                      onClick={() => !unavailable && toggleSlot(slot.id)}
+                      aria-label={
+                        unavailable
+                          ? `${formatTimeRange(slot.start_time, slot.end_time)} — already booked`
+                          : formatTimeRange(slot.start_time, slot.end_time)
+                      }
+                      aria-pressed={selected}
+                      title={unavailable ? 'Already booked' : undefined}
+                      className={`relative rounded-xl border p-2.5 text-center text-xs transition ${
+                        unavailable
+                          ? 'cursor-not-allowed border-forest-800 bg-forest-950/30 text-cream-muted/40'
+                          : selected
+                          ? 'border-brand-blue-400 bg-brand-blue-500 font-bold text-white shadow-glow-blue'
+                          : 'border-forest-700/80 bg-forest-950/60 text-cream-muted hover:border-brand-blue-400/50 hover:text-cream'
+                      }`}
+                    >
+                      {/* Lock icon in the corner for taken slots */}
+                      {unavailable && (
+                        <Lock className="absolute right-1.5 top-1.5 h-3 w-3 text-cream-muted/50" />
+                      )}
+
+                      <span className={`font-mono block ${unavailable ? 'line-through' : ''}`}>
+                        {formatTimeRange(slot.start_time, slot.end_time)}
+                      </span>
+                      <span className={`block text-[10px] mt-0.5 ${unavailable ? 'opacity-60' : 'opacity-75'}`}>
+                        {unavailable ? 'Booked' : formatCurrency(slot.price)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Legend — explains the two visual states at a glance */}
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-cream-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block h-3 w-3 rounded border border-forest-700/80 bg-forest-950/60" />
+                  Available
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block h-3 w-3 rounded border border-brand-blue-400 bg-brand-blue-500" />
+                  Selected
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-block h-3 w-3 rounded border border-forest-800 bg-forest-950/30" />
+                  Already booked
+                </span>
+                {availableSlots.length === 0 && (
+                  <span className="font-semibold text-amber-300">
+                    All slots for this day are taken.
+                  </span>
+                )}
+              </div>
+            </>
           )}
         </div>
 
