@@ -406,32 +406,32 @@ export function Landing() {
             </div>
 
             {/* Hero chips — hardcoded marketing copy */}
-<div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
-    <Layers className="h-3.5 w-3.5 text-[#B6DAC8]" />
-    <span>Silica Sand Court</span>
-  </span>
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-semibold text-[#B6DAC8] backdrop-blur-md">
-    <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
-    <span>Paddle Rental ₱30/hr</span>
-  </span>
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-    <Coffee className="h-3.5 w-3.5 text-[#B6DAC8]" />
-    <span>In-House Cafe & CR</span>
-  </span>
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-    <Car className="h-3.5 w-3.5 text-[#B6DAC8]" />
-    <span>Own Parking</span>
-  </span>
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-    <Wifi className="h-3.5 w-3.5 text-[#B6DAC8]" />
-    <span>Piso Wi-Fi</span>
-  </span>
-  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
-    <Armchair className="h-3.5 w-3.5 text-[#B6DAC8]" />
-    <span>Shaded Waiting Area</span>
-  </span>
-</div>
+            <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/10 pt-4 text-[11px] sm:text-xs text-white/90">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 font-medium backdrop-blur-md">
+                <Layers className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Silica Sand Court</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#B6DAC8]/40 bg-[#115259]/60 px-3 py-1 font-semibold text-[#B6DAC8] backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Paddle Rental ₱30/hr</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Coffee className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>In-House Cafe & CR</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Car className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Own Parking</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Wifi className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Piso Wi-Fi</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 backdrop-blur-md">
+                <Armchair className="h-3.5 w-3.5 text-[#B6DAC8]" />
+                <span>Shaded Waiting Area</span>
+              </span>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -997,42 +997,74 @@ export function Landing() {
         </div>
       )}
 
-      {/* Features Section */}
+      {/* Location / Google Maps Section */}
       <section className="border-b border-[#688D87]/20 bg-[#F4F8F6] py-14 sm:py-20">
         <div className="container-page">
-          <div className="mb-10 text-center sm:mb-12">
+          <div className="mb-8 text-center sm:mb-10">
             <span className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#115259]">
-              Why Paddle Place
+              Find Us
             </span>
             <h2 className="font-display text-2xl font-extrabold tracking-tight text-[#162422] sm:text-3xl mt-1">
-              Built for Players
+              Visit Paddle Place
             </h2>
+            <p className="mt-2 text-xs text-[#526E69] sm:text-sm">
+              Purok Mangga 2 Soong, Tago, Surigao Del Sur
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:gap-6 md:grid-cols-3">
-            {[
-              { icon: CalendarPlus, title: 'Instant Booking', desc: 'Select your preferred time slots in under a minute. No phone calls, no waiting.' },
-              { icon: Wallet, title: 'GCash Payment', desc: 'Pay securely with GCash. Upload your receipt and get confirmed quickly.' },
-              { icon: ShieldCheck, title: 'Admin Verified', desc: 'Every booking is reviewed and confirmed by our team so your court is always guaranteed.' },
-            ].map((feat, i) => {
-              const Icon = feat.icon;
-              return (
-                <motion.div
-                  key={feat.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="rounded-2xl border border-[#688D87]/20 bg-white p-5 shadow-sm sm:p-6 hover:shadow-md transition"
-                >
-                  <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-[#E8F2EE] text-[#115259]">
-                    <Icon className="h-6 w-6" />
+          <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+            {/* Map embed */}
+            <div className="lg:col-span-2 overflow-hidden rounded-2xl border border-[#688D87]/20 bg-white shadow-sm">
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1121.1552815034408!2d126.22057245319824!3d9.025706867136025!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x330239001d48ab49%3A0xcb2b9d5815aed0cc!2sPaddle%20Place!5e1!3m2!1sen!2sph!4v1791728852350!5m2!1sen!2sph"
+                title="Paddle Place Location"
+                className="h-[320px] w-full sm:h-[420px]"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+
+            {/* Info card */}
+            <div className="flex flex-col justify-between rounded-2xl border border-[#688D87]/20 bg-white p-5 shadow-sm sm:p-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F2EE] text-[#115259]">
+                    <MapPin className="h-5 w-5" />
                   </div>
-                  <h3 className="font-display text-base font-bold text-[#162422] sm:text-lg">{feat.title}</h3>
-                  <p className="mt-2 text-xs leading-relaxed text-[#526E69] sm:text-sm">{feat.desc}</p>
-                </motion.div>
-              );
-            })}
+                  <div>
+                    <h3 className="font-display text-sm font-bold text-[#162422]">Address</h3>
+                    <p className="mt-0.5 text-xs leading-relaxed text-[#526E69]">
+                      Purok Mangga 2 Soong, Tago, Surigao Del Sur
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#E8F2EE] text-[#115259]">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm font-bold text-[#162422]">Open Hours</h3>
+                    <p className="mt-0.5 text-xs leading-relaxed text-[#526E69]">
+                      Daily · 5:00 AM – 12:00 AM
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href="https://maps.app.goo.gl/wnR4nyBESjpWopqWA"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#115259] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#0E4348]"
+              >
+                <MapPin className="h-4 w-4" />
+                Open in Google Maps
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
           </div>
         </div>
       </section>
