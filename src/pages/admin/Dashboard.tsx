@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   CalendarDays,
@@ -59,17 +59,26 @@ export function Dashboard() {
   const month = calendarDate.getMonth();
   const weeks = getMonthMatrix(year, month);
 
-  // Group bookings by date
-  const bookingsByDate = new Map<string, Booking[]>();
-  bookings.forEach((b) => {
-    if (!b || !b.date) return;
-    const existing = bookingsByDate.get(b.date) ?? [];
-    existing.push(b);
-    bookingsByDate.set(b.date, existing);
-  });
+  // Cancelled bookings are excluded from the calendar, day counts,
+  // selected-date drawer, and list view.
+  const activeBookings = useMemo(
+    () => bookings.filter((b) => b && b.date && b.status !== 'cancelled'),
+    [bookings]
+  );
+
+  // Group active bookings by date
+  const bookingsByDate = useMemo(() => {
+    const map = new Map<string, Booking[]>();
+    activeBookings.forEach((b) => {
+      const existing = map.get(b.date) ?? [];
+      existing.push(b);
+      map.set(b.date, existing);
+    });
+    return map;
+  }, [activeBookings]);
 
   const selectedDateBookings = selectedDate
-    ? (bookingsByDate.get(selectedDate) ?? []).filter((b) => b)
+    ? (bookingsByDate.get(selectedDate) ?? [])
     : [];
 
   const formatSlotTime = (slot: any): string => {
@@ -373,7 +382,6 @@ export function Dashboard() {
                   ) : (
                     <div className="space-y-2.5">
                       {selectedDateBookings.map((b) => {
-                        if (!b) return null;
                         const customerName = getCustomerName(b);
                         const courtName = b.court_name || 'Unknown Court';
                         const totalAmount = b.total_amount || 0;
@@ -417,13 +425,12 @@ export function Dashboard() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {bookings.length === 0 ? (
+              {activeBookings.length === 0 ? (
                 <p className="py-8 text-center text-sm font-medium text-cream-muted">
                   No bookings registered yet.
                 </p>
               ) : (
-                bookings.map((b) => {
-                  if (!b) return null;
+                activeBookings.map((b) => {
                   const customerName = getCustomerName(b);
                   const courtName = b.court_name || 'Unknown Court';
                   const totalAmount = b.total_amount || 0;
