@@ -28,8 +28,13 @@ const BASE_URL = APP_CONFIG.apiUrl;
 const CLIENT_SUBDOMAIN = import.meta.env.VITE_CLIENT_SUBDOMAIN ?? 'paddleplace';
 
 /**
- * Paths whose 401/409 should trigger a login redirect.
- * Any other 401/409 is surfaced as an inline error.
+ * Paths whose 401 should trigger a login redirect.
+ * Any other 401 is surfaced as an inline error.
+ *
+ * Note: 409 is NOT in this list. A 409 from an admin endpoint means
+ * "valid JWT but no client_id claim" — typically a stale token from
+ * before Phase 3. Treating it as a login redirect caused an infinite
+ * loop (admin → 409 → login → admin → 409 → …). Show it inline instead.
  */
 const AUTH_REDIRECT_PATTERNS: RegExp[] = [
   /^\/api\/admin(\/|$)/,
@@ -71,7 +76,7 @@ function parseRetryAfter(headers: Headers): number | undefined {
 }
 
 /**
- * After a 401/409 on an admin path, redirect the user to /login.
+ * After a 401 on an admin path, redirect the user to /login.
  * Keeps a `next` param so they land back where they were.
  */
 function redirectToLogin(): void {
@@ -127,11 +132,11 @@ export async function apiRequest<T>(
         throw new ApiError(msg, 429, body, msg, retryAfter);
       }
 
-      // 401 OR 409 on an auth-required path → redirect to /login
-      if ((res.status === 401 || res.status === 409) && isAuthRedirectPath(fullPath)) {
-        if (res.status === 401) {
-          localStorage.removeItem('admin_token');
-        }
+      // 401 on an auth-required path → redirect to /login.
+      // 409 is NOT redirected — it surfaces as an inline error so a stale
+      // token (missing client_id claim) doesn't cause an infinite loop.
+      if (res.status === 401 && isAuthRedirectPath(fullPath)) {
+        localStorage.removeItem('admin_token');
         redirectToLogin();
       }
 
@@ -139,7 +144,7 @@ export async function apiRequest<T>(
         res.status === 401
           ? 'Your session has expired. Please sign in again.'
           : res.status === 409
-          ? 'Something went wrong with your account. Please sign in again.'
+          ? 'Client identification required. Please sign in again to refresh your session.'
           : res.status === 404
           ? 'Not found.'
           : `Request failed (${res.status}).`;
