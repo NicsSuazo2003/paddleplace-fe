@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { looksLikeTestName, looksLikeTestEmail } from '@/utils/validation';
 import { z } from 'zod';
 import {
   Clock,
@@ -38,7 +39,11 @@ const customerSchema = z.object({
     .trim()
     .min(2, 'Name is required')
     .max(80, 'Name is too long')
-    .regex(/^[A-Za-zÀ-ÿ.'\-\s]+$/, "Name can only contain letters, spaces, and . ' -"),
+    .regex(/^[A-Za-zÀ-ÿ.'\-\s]+$/, "Name can only contain letters, spaces, and . ' -")
+    // ✅ Client-side trap — mirrors BookingService.LooksLikeTest
+    .refine((v) => !looksLikeTestName(v), {
+      message: 'Please use your real name — this looks like a test.',
+    }),
 
   email: z
     .string()
@@ -46,7 +51,11 @@ const customerSchema = z.object({
     .toLowerCase()
     .min(1, 'Email is required')
     .email('Enter a valid email address')
-    .max(120, 'Email is too long'),
+    .max(120, 'Email is too long')
+    // ✅ Client-side trap — mirrors BookingService.LooksLikeTest
+    .refine((v) => !looksLikeTestEmail(v), {
+      message: 'Please use your real email — this looks like a test or disposable address.',
+    }),
 
   phone: z
     .string()
