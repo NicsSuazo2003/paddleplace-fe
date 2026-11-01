@@ -1,3 +1,4 @@
+// src/pages/Booking.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,7 +42,6 @@ const customerSchema = z.object({
     .min(2, 'Name is required')
     .max(80, 'Name is too long')
     .regex(/^[A-Za-zÀ-ÿ.'\-\s]+$/, "Name can only contain letters, spaces, and . ' -")
-    // ✅ Client-side trap — mirrors BookingService.LooksLikeTest
     .refine((v) => !looksLikeTestName(v), {
       message: 'Please use your real name — this looks like a test.',
     }),
@@ -53,7 +53,6 @@ const customerSchema = z.object({
     .min(1, 'Email is required')
     .email('Enter a valid email address')
     .max(120, 'Email is too long')
-    // ✅ Client-side trap — mirrors BookingService.LooksLikeTest
     .refine((v) => !looksLikeTestEmail(v), {
       message: 'Please use your real email — this looks like a test or disposable address.',
     }),
@@ -68,6 +67,11 @@ const customerSchema = z.object({
     }),
 
   notes: z.string().max(500, 'Notes are too long').optional(),
+
+    // ✅ NEW — must agree to Terms & Conditions
+  agreeToTerms: z.literal(true, {
+    message: 'You must agree to the Terms & Conditions to continue.',
+  }),
 });
 
 type CustomerForm = z.infer<typeof customerSchema>;
@@ -77,9 +81,7 @@ const HOLD_MINUTES = Math.max(1, Math.round(APP_CONFIG.paymentTimerSeconds / 60)
 export function Booking() {
   const navigate = useNavigate();
   const formRef = useRef<HTMLDivElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
 
-  // ✅ Selector-based subscriptions (avoid re-render on unrelated state)
   const courts = useBookingStore((s) => s.courts);
   const selectedDate = useBookingStore((s) => s.selectedDate);
   const slots = useBookingStore((s) => s.slots);
@@ -95,10 +97,6 @@ export function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
-
-  // ✅ NEW — mount-time guard: if the user lands here with a live pending
-  // booking but no slot selection (e.g. pressed back from /checkout),
-  // route them straight back to /checkout instead of showing the empty state.
   const [checkingPending, setCheckingPending] = useState(false);
 
   const {
@@ -108,10 +106,12 @@ export function Booking() {
     formState: { errors },
   } = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
-    // ✅ Softer UX: validate on blur, then re-validate on change
     mode: 'onTouched',
     reValidateMode: 'onChange',
-    defaultValues: useBookingStore.getState().customer,
+    defaultValues: {
+      ...useBookingStore.getState().customer,
+      agreeToTerms: false as unknown as true,
+    },
   });
 
   const notesValue = watch('notes') ?? '';
@@ -122,16 +122,14 @@ export function Booking() {
     }
   }, [courts.length, loadCourts]);
 
-  // ✅ NEW — resume-guard for back-button / refresh on /booking
+  // Resume-guard for back-button / refresh on /booking
   useEffect(() => {
-    // Only when the user has nothing selected AND no booking is already in memory
     if (selectedSlotIds.length > 0) return;
     if (useBookingStore.getState().currentBooking) return;
 
     const savedRef = localStorage.getItem('pendingBookingRef');
     if (!savedRef) return;
 
-    // Respect a per-session dismissal so the user can start a fresh booking
     const dismissed = sessionStorage.getItem('pendingBannerDismissed');
     if (dismissed === savedRef) return;
 
@@ -151,7 +149,6 @@ export function Booking() {
           window.dispatchEvent(new Event('pendingBookingUpdated'));
         }
       } catch {
-        // stale / deleted — drop it silently
         if (!cancelled) localStorage.removeItem('pendingBookingRef');
       } finally {
         if (!cancelled) setCheckingPending(false);
@@ -164,7 +161,6 @@ export function Booking() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ Only auto-scroll on small screens where summary + form aren't both visible
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.matchMedia('(min-width: 1024px)').matches) return;
@@ -175,7 +171,6 @@ export function Booking() {
     }
   }, []);
 
-  // ✅ Derived values via useMemo
   const selectedSlots = useMemo(() => {
     const state = useBookingStore.getState();
     return getSelectedSlotItems(state);
@@ -219,13 +214,15 @@ export function Booking() {
     setSubmitError(null);
     setShowErrorSummary(false);
     try {
-      setCustomer(data);
+      // Strip agreeToTerms — the backend DTO doesn't know about it
+      const { agreeToTerms, ...customerData } = data;
+      void agreeToTerms;
+      setCustomer(customerData);
       await createBooking();
 
       const created = useBookingStore.getState().currentBooking;
       if (created?.reference_code) {
         localStorage.setItem('pendingBookingRef', created.reference_code);
-        // ✅ Notify any listeners (Landing banner, etc.)
         window.dispatchEvent(new Event('pendingBookingUpdated'));
       }
 
@@ -237,10 +234,9 @@ export function Booking() {
     }
   };
 
-  // ✅ Scroll to first invalid field on submit failure
   const onInvalid = (formErrors: typeof errors) => {
     setShowErrorSummary(true);
-    const order: (keyof CustomerForm)[] = ['name', 'phone', 'email', 'notes'];
+    const order: (keyof CustomerForm)[] = ['name', 'phone', 'email', 'notes', 'agreeToTerms'];
     const first = order.find((k) => formErrors[k]);
     if (first) {
       const el = document.getElementById(first);
@@ -255,8 +251,6 @@ export function Booking() {
   };
 
   const errorCount = Object.keys(errors).length;
-
-  // ✅ Stale-selection guard
   const hasStaleSelection = selectedSlotIds.length > 0 && selectedSlots.length === 0;
 
   if (loadingCourts && courts.length === 0) {
@@ -270,7 +264,6 @@ export function Booking() {
   }
 
   if (selectedSlots.length === 0 && !hasStaleSelection) {
-    // ✅ NEW — show a spinner while we're checking for a resumable booking
     if (checkingPending) {
       return (
         <div className="min-h-screen bg-charcoal">
@@ -319,7 +312,6 @@ export function Booking() {
           </div>
         )}
 
-        {/* ✅ Stale selection warning */}
         {hasStaleSelection && (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
@@ -339,7 +331,6 @@ export function Booking() {
           </div>
         )}
 
-        {/* ✅ Error summary banner */}
         {showErrorSummary && errorCount > 0 && (
           <div className="mb-4 flex items-start gap-2 rounded-xl border border-error/40 bg-error/10 p-3 text-xs text-error">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -352,6 +343,7 @@ export function Booking() {
                 {errors.phone?.message && <li>{errors.phone.message}</li>}
                 {errors.email?.message && <li>{errors.email.message}</li>}
                 {errors.notes?.message && <li>{errors.notes.message}</li>}
+                {errors.agreeToTerms?.message && <li>{errors.agreeToTerms.message}</li>}
               </ul>
             </div>
           </div>
@@ -366,7 +358,6 @@ export function Booking() {
                   <CalendarDays className="h-3.5 w-3.5 text-brand-blue-300" />
                   Your Selection ({selectedCourts.length} court{selectedCourts.length > 1 ? 's' : ''})
                 </h2>
-                {/* ✅ Promoted edit chip */}
                 <Link
                   to="/#booking"
                   className="inline-flex items-center gap-1 rounded-lg border border-brand-blue-500/40 bg-brand-blue-500/10 px-2.5 py-1 text-[11px] font-bold text-brand-blue-300 transition hover:bg-brand-blue-500/20"
@@ -380,7 +371,6 @@ export function Booking() {
                 {formatDateLong(selectedDate)}
               </p>
 
-              {/* Court Cards */}
               <div className="space-y-2.5">
                 {selectedCourts.map((court) => {
                   const courtSlots = selectedSlots.filter((s) => {
@@ -423,7 +413,6 @@ export function Booking() {
                 })}
               </div>
 
-              {/* Slot Row Pills — grouped by court, each removable */}
               <div className="mt-3.5 space-y-3">
                 {selectedCourts.map((court) => {
                   const courtSlots = selectedSlots.filter((s) => {
@@ -456,7 +445,6 @@ export function Booking() {
                             <span className="text-xs font-bold text-brand-blue-300 sm:text-sm">
                               {formatCurrency(slot.price)}
                             </span>
-                            {/* ✅ Per-slot remove */}
                             <button
                               type="button"
                               onClick={() => removeSlot(slot.slot_id)}
@@ -530,10 +518,67 @@ export function Booking() {
                     placeholder="Any special requests or equipment rental notes..."
                     {...register('notes')}
                   />
-                  {/* ✅ Char counter */}
                   <p className="mt-1 text-right text-[11px] text-cream-muted">
                     {notesValue.length} / 500
                   </p>
+                </div>
+
+                {/* ✅ NEW — Terms agreement checkbox */}
+                <div className="rounded-xl border border-forest-700/60 bg-forest-950/50 p-3.5">
+                  <label className="flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      id="agreeToTerms"
+                      type="checkbox"
+                      {...register('agreeToTerms')}
+                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-forest-700 bg-forest-950 text-brand-blue-500 focus:ring-brand-blue-500/30 cursor-pointer"
+                    />
+                    <span className="text-xs leading-relaxed text-cream-muted">
+                      I have read and agree to the{' '}
+                      <Link
+                        to="/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-brand-blue-300 underline hover:text-brand-blue-200"
+                      >
+                        Terms &amp; Conditions
+                      </Link>
+                      ,{' '}
+                      <Link
+                        to="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-brand-blue-300 underline hover:text-brand-blue-200"
+                      >
+                        Privacy Policy
+                      </Link>
+                      ,{' '}
+                      <Link
+                        to="/refund-policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-brand-blue-300 underline hover:text-brand-blue-200"
+                      >
+                        Refund Policy
+                      </Link>
+                      , and{' '}
+                      <Link
+                        to="/payment-policy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-brand-blue-300 underline hover:text-brand-blue-200"
+                      >
+                        Payment Policy
+                      </Link>
+                      . I understand that confirmed bookings are non-cancellable and
+                      non-refundable.
+                    </span>
+                  </label>
+                  {errors.agreeToTerms?.message && (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-error">
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                      {errors.agreeToTerms.message}
+                    </p>
+                  )}
                 </div>
 
                 {submitError && (
@@ -553,7 +598,6 @@ export function Booking() {
                   Booking Summary
                 </h2>
 
-                {/* ✅ Court cards with subtotals only (no duplicate slot list) */}
                 <div className="mb-3.5 space-y-2">
                   {selectedCourts.map((court) => {
                     const courtSlots = selectedSlots.filter((s) => {
@@ -579,7 +623,6 @@ export function Booking() {
                   })}
                 </div>
 
-                {/* ✅ Compact slot list (no per-court duplication header) */}
                 <AnimatePresence mode="popLayout">
                   <motion.div
                     key="slots"
@@ -630,7 +673,7 @@ export function Booking() {
                   className="mt-4"
                   isLoading={submitting}
                   onClick={handleSummaryButtonClick}
-                  rightIcon={<ArrowRight className="h-5 w-5" />}
+                                    rightIcon={<ArrowRight className="h-5 w-5" />}
                 >
                   Proceed to Checkout
                 </Button>
@@ -648,7 +691,7 @@ export function Booking() {
         </div>
       </div>
 
-      {/* ✅ Sticky Mobile Checkout Bar — hold timer + validation feedback */}
+      {/* ✅ Sticky Mobile Checkout Bar */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-forest-700/80 bg-forest-950/95 p-3.5 backdrop-blur-md lg:hidden">
         {showErrorSummary && errorCount > 0 && (
           <p className="mb-2 flex items-center gap-1.5 rounded-lg border border-error/40 bg-error/10 p-2 text-[11px] font-semibold text-error">

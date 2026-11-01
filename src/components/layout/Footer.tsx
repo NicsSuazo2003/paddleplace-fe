@@ -1,3 +1,4 @@
+// src/components/layout/Footer.tsx
 import { Link } from 'react-router-dom';
 import { Shield, MapPin, Phone, Clock, Instagram, Facebook } from 'lucide-react';
 import { Logo } from '@/components/Logo';
@@ -22,7 +23,9 @@ export function Footer() {
               <Instagram className="h-4 w-4" />
             </a>
             <a
-              href="#"
+              href="https://www.facebook.com/profile.php?id=61590660253911"
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-xl border border-white/10 bg-white/5 p-2 text-white/70 transition hover:border-[#B6DAC8] hover:text-[#B6DAC8] hover:bg-white/10"
               aria-label="Facebook"
             >
@@ -31,7 +34,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-7 sm:gap-8 md:grid-cols-3">
+        <div className="grid grid-cols-2 gap-7 sm:gap-8 md:grid-cols-4">
           {/* Quick Links */}
           <div>
             <h4 className="mb-3 font-sans text-xs font-extrabold uppercase tracking-[0.18em] text-[#B6DAC8] sm:mb-4">
@@ -78,7 +81,38 @@ export function Footer() {
               </li>
               <li className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 shrink-0 text-[#B6DAC8] mt-0.5" />
-                <span className="leading-relaxed">Purok Mangga 2, Soong Barangay Purisima, Tago, Surigao Del Sur</span>
+                <span className="leading-relaxed">
+                  Purok Mangga 2, Soong Barangay Purisima, Tago, Surigao Del Sur
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          {/* ✅ NEW — Legal */}
+          <div>
+            <h4 className="mb-3 font-sans text-xs font-extrabold uppercase tracking-[0.18em] text-[#B6DAC8] sm:mb-4">
+              Legal
+            </h4>
+            <ul className="space-y-2 text-xs sm:space-y-2.5 sm:text-sm">
+              <li>
+                <Link to="/terms" className="text-white/70 transition hover:text-[#B6DAC8]">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-white/70 transition hover:text-[#B6DAC8]">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/refund-policy" className="text-white/70 transition hover:text-[#B6DAC8]">
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/payment-policy" className="text-white/70 transition hover:text-[#B6DAC8]">
+                  Payment Policy
+                </Link>
               </li>
             </ul>
           </div>
