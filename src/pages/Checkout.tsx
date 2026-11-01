@@ -1,3 +1,4 @@
+// src/pages/Checkout.tsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -21,6 +22,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { Button } from '@/components/ui/Button';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useClientStore } from '@/stores/clientStore';
 import { bookingService } from '@/services/bookingService';
@@ -64,6 +66,9 @@ export function Checkout() {
     [settings?.payment_methods]
   );
 
+  // ✅ NEW — restoring state for localStorage-driven resume
+  const [restoring, setRestoring] = useState(true);
+
   const [timeLeft, setTimeLeft] = useState<number>(() => {
     if (!currentBooking?.payment_expires_at) {
       return APP_CONFIG.paymentTimerSeconds;
@@ -94,11 +99,65 @@ export function Checkout() {
     loadSettings();
   }, [loadSettings]);
 
+  // ✅ NEW — restore pending booking from localStorage on hard reload / back entry
   useEffect(() => {
-    if (!currentBooking) {
-      navigate('/booking');
+    if (currentBooking) {
+      setRestoring(false);
+      return;
     }
+
+    const savedRef = localStorage.getItem('pendingBookingRef');
+    if (!savedRef) {
+      setRestoring(false);
+      navigate('/booking');
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const booking = await bookingService.trackBooking(savedRef);
+        if (cancelled) return;
+
+        if (booking.status !== 'pending_payment') {
+          // Not resumable — clean up and bounce
+          localStorage.removeItem('pendingBookingRef');
+          window.dispatchEvent(new Event('pendingBookingUpdated'));
+          setRestoring(false);
+          navigate('/booking');
+          return;
+        }
+
+        useBookingStore.setState({ currentBooking: booking });
+        setRestoring(false);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to restore pending booking:', err);
+        localStorage.removeItem('pendingBookingRef');
+        setRestoring(false);
+        navigate('/booking');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentBooking, navigate]);
+
+  // ✅ NEW — clear the ref on any terminal status (and redirect on expired)
+  useEffect(() => {
+    const status = currentBooking?.status;
+    if (
+      status &&
+      status !== 'pending_payment' &&
+      status !== 'payment_submitted'
+    ) {
+      localStorage.removeItem('pendingBookingRef');
+      window.dispatchEvent(new Event('pendingBookingUpdated'));
+      if (status === 'expired') navigate('/booking');
+    }
+  }, [currentBooking?.status, navigate]);
 
   // ✅ Navigate only on transition to expired
   useEffect(() => {
@@ -157,6 +216,17 @@ export function Checkout() {
     }
   }, [enabledMethods, selectedMethod]);
 
+  // ✅ NEW — loading guard for restore
+  if (restoring && !currentBooking) {
+    return (
+      <div className="min-h-screen bg-charcoal">
+        <Navbar />
+        <LoadingSpinner className="pt-32" />
+        <Footer />
+      </div>
+    );
+  }
+
   if (!currentBooking) {
     return null;
   }
@@ -192,6 +262,9 @@ export function Checkout() {
         paymentRef.trim(),
         selectedMethod?.name
       );
+      // ✅ NEW — clear ref before navigating so the banner doesn't reappear
+      localStorage.removeItem('pendingBookingRef');
+      window.dispatchEvent(new Event('pendingBookingUpdated'));
       navigate('/success');
     } catch (err) {
       setUploadError({
@@ -431,7 +504,6 @@ export function Checkout() {
                         </li>
                       </ol>
 
-                      {/* ✅ Transparency notice — clearer hierarchy */}
                       <div className="mt-2 rounded-lg border border-brand-blue-500/30 bg-brand-blue-500/10 p-3 space-y-1.5">
                         <p className="flex items-center gap-1.5 text-[11px] font-bold text-brand-blue-200">
                           <AlertCircle className="h-3.5 w-3.5" />
@@ -498,7 +570,6 @@ export function Checkout() {
                             alt={`${methodName} QR Code`}
                             className="h-36 w-36 object-contain mx-auto rounded-lg"
                           />
-                          {/* ✅ Desktop fallback copy */}
                           <p className="mt-2 text-[11px] font-medium text-cream-muted">
                             Scan with your phone, or use the account number above
                           </p>
@@ -799,6 +870,8 @@ export function Checkout() {
                     onClick={() => {
                       if (window.confirm('Cancel this booking and release the held slots?')) {
                         reset();
+                        localStorage.removeItem('pendingBookingRef');
+                        window.dispatchEvent(new Event('pendingBookingUpdated'));
                         navigate('/booking');
                       }
                     }}
@@ -813,7 +886,7 @@ export function Checkout() {
         </div>
       </div>
 
-      {/* ✅ Copy error toast */}
+            {/* ✅ Copy error toast */}
       {copyError && (
         <div className="fixed left-1/2 top-20 z-50 -translate-x-1/2 rounded-xl border border-error/40 bg-charcoal/95 px-3.5 py-2 text-xs font-semibold text-error shadow-lg backdrop-blur-md">
           {copyError}

@@ -22,6 +22,8 @@ import {
   Car,
   Wifi,
   Armchair,
+  AlertCircle,
+  X,
 } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -30,6 +32,7 @@ import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBookingStore } from '@/stores/bookingStore';
 import { useOpenPlayStore } from '@/stores/openPlayStore';
 import { useClientStore } from '@/stores/clientStore';
+import { bookingService } from '@/services/bookingService';
 import { COURT_IMAGES, APP_CONFIG, DEFAULT_AMENITIES } from '@/utils/constants';
 import { getAmenityIconForItem } from '@/utils/amenityIcons';
 import {
@@ -39,7 +42,7 @@ import {
   toISODate,
   addDays,
 } from '@/utils/format';
-import type { TimeSlot, Court, OpenPlaySession, AmenityItem } from '@/types';
+import type { TimeSlot, Court, OpenPlaySession, AmenityItem, Booking } from '@/types';
 
 const COURT_ACCENTS = [
   { header: 'text-[#115259]', dot: 'bg-[#115259]', border: 'border-[#115259]/30', bg: 'bg-[#F0F6F5]', text: 'text-[#115259]', hoverBorder: 'hover:border-[#115259]', hoverBg: 'hover:bg-[#E2EEEB]' },
@@ -123,6 +126,10 @@ export function Landing() {
   const navigate = useNavigate();
   const bookingSectionRef = useRef<HTMLDivElement>(null);
 
+  // ✅ NEW — pending booking banner state
+  const [pendingBooking, setPendingBooking] = useState<Booking | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
   const {
     courts,
     selectedDate,
@@ -161,6 +168,49 @@ export function Landing() {
   const [bookingMode, setBookingMode] = useState<BookingMode>('private');
   const weekStart = addDays(new Date(), weekOffset * 7);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  // ✅ NEW — read pending booking and show banner
+  useEffect(() => {
+    const savedRef = localStorage.getItem('pendingBookingRef');
+    if (!savedRef) return;
+
+    const dismissed = sessionStorage.getItem('pendingBannerDismissed');
+    if (dismissed === savedRef) {
+      setBannerDismissed(true);
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const booking = await bookingService.trackBooking(savedRef);
+        if (cancelled) return;
+
+        if (booking.status === 'pending_payment') {
+          setPendingBooking(booking);
+        } else {
+          localStorage.removeItem('pendingBookingRef');
+          window.dispatchEvent(new Event('pendingBookingUpdated'));
+        }
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to load pending booking for banner:', err);
+        localStorage.removeItem('pendingBookingRef');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    const ref = localStorage.getItem('pendingBookingRef');
+    if (ref) sessionStorage.setItem('pendingBannerDismissed', ref);
+  };
+
+  const showPendingBanner = !!pendingBooking && !bannerDismissed;
 
   useEffect(() => {
     if (courts.length === 0) {
@@ -303,6 +353,52 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-[#F8FAF9] text-[#162422]">
       <Navbar />
+
+      {/* ✅ NEW — pending booking banner */}
+      {showPendingBanner && pendingBooking && (
+        <div className="fixed inset-x-0 top-16 z-40 px-3 sm:top-20 sm:px-4">
+          <div className="container-page">
+            <motion.div
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-400 bg-white p-3 shadow-2xl sm:gap-4 sm:p-4"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-400 bg-amber-50 text-amber-600">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#162422]">
+                  You have an unpaid booking
+                </p>
+                <p className="mt-0.5 text-xs text-[#526E69]">
+                  {pendingBooking.court_name} ·{' '}
+                  {formatDateLong(pendingBooking.date)} ·{' '}
+                  {formatCurrency(pendingBooking.total_amount)}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/checkout')}
+                  className="bg-[#115259] text-white hover:bg-[#0E4348]"
+                  rightIcon={<ArrowRight className="h-3.5 w-3.5" />}
+                >
+                  Pay now
+                </Button>
+                <button
+                  onClick={dismissBanner}
+                  aria-label="Dismiss"
+                  className="rounded-lg border border-[#688D87]/30 bg-white p-2 text-[#526E69] transition hover:border-amber-400 hover:text-amber-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="relative flex min-h-[85vh] items-start pt-28 sm:min-h-screen sm:items-center sm:pt-20 overflow-hidden">
@@ -661,7 +757,7 @@ export function Landing() {
                         <ChevronLeft className="h-5 w-5" />
                       </button>
 
-                      <div className="flex flex-1 gap-2 overflow-x-auto pt-3 pb-1.5 sm:grid sm:grid-cols-7 sm:overflow-visible sm:py-0 no-scrollbar snap-x">
+                                            <div className="flex flex-1 gap-2 overflow-x-auto pt-3 pb-1.5 sm:grid sm:grid-cols-7 sm:overflow-visible sm:py-0 no-scrollbar snap-x">
                         {weekDays.map((day) => {
                           const iso = toISODate(day);
                           const isSelected = selectedDate === iso;

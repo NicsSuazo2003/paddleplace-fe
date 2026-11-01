@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, Textarea } from '@/components/ui/Input';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useBookingStore, getSelectedSlotItems, getSelectedTotal } from '@/stores/bookingStore';
+import { bookingService } from '@/services/bookingService';
 import { formatTimeRange, formatCurrency, formatDateLong, formatCountdown } from '@/utils/format';
 import { FIXED_SLOT, APP_CONFIG } from '@/utils/constants';
 import type { Court, TimeSlot, CustomerDetails } from '@/types';
@@ -95,6 +96,11 @@ export function Booking() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showErrorSummary, setShowErrorSummary] = useState(false);
 
+  // ✅ NEW — mount-time guard: if the user lands here with a live pending
+  // booking but no slot selection (e.g. pressed back from /checkout),
+  // route them straight back to /checkout instead of showing the empty state.
+  const [checkingPending, setCheckingPending] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -115,6 +121,48 @@ export function Booking() {
       loadCourts();
     }
   }, [courts.length, loadCourts]);
+
+  // ✅ NEW — resume-guard for back-button / refresh on /booking
+  useEffect(() => {
+    // Only when the user has nothing selected AND no booking is already in memory
+    if (selectedSlotIds.length > 0) return;
+    if (useBookingStore.getState().currentBooking) return;
+
+    const savedRef = localStorage.getItem('pendingBookingRef');
+    if (!savedRef) return;
+
+    // Respect a per-session dismissal so the user can start a fresh booking
+    const dismissed = sessionStorage.getItem('pendingBannerDismissed');
+    if (dismissed === savedRef) return;
+
+    let cancelled = false;
+    setCheckingPending(true);
+
+    (async () => {
+      try {
+        const booking = await bookingService.trackBooking(savedRef);
+        if (cancelled) return;
+
+        if (booking.status === 'pending_payment') {
+          useBookingStore.setState({ currentBooking: booking });
+          navigate('/checkout', { replace: true });
+        } else {
+          localStorage.removeItem('pendingBookingRef');
+          window.dispatchEvent(new Event('pendingBookingUpdated'));
+        }
+      } catch {
+        // stale / deleted — drop it silently
+        if (!cancelled) localStorage.removeItem('pendingBookingRef');
+      } finally {
+        if (!cancelled) setCheckingPending(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ✅ Only auto-scroll on small screens where summary + form aren't both visible
   useEffect(() => {
@@ -177,6 +225,8 @@ export function Booking() {
       const created = useBookingStore.getState().currentBooking;
       if (created?.reference_code) {
         localStorage.setItem('pendingBookingRef', created.reference_code);
+        // ✅ Notify any listeners (Landing banner, etc.)
+        window.dispatchEvent(new Event('pendingBookingUpdated'));
       }
 
       navigate('/checkout');
@@ -220,6 +270,17 @@ export function Booking() {
   }
 
   if (selectedSlots.length === 0 && !hasStaleSelection) {
+    // ✅ NEW — show a spinner while we're checking for a resumable booking
+    if (checkingPending) {
+      return (
+        <div className="min-h-screen bg-charcoal">
+          <Navbar />
+          <LoadingSpinner className="pt-32" />
+          <Footer />
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-charcoal">
         <Navbar />
