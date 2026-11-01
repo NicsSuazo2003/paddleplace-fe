@@ -11,6 +11,7 @@ import {
   Menu,
   X,
   Users,
+  Shield,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
@@ -23,6 +24,7 @@ const navItems = [
   { path: '/admin/pricing', label: 'Pricing', icon: Tag },
   { path: '/admin/open-play', label: 'Open Play', icon: Users },
   { path: '/admin/settings', label: 'Settings', icon: Settings },
+  { path: '/admin/security-logs', label: 'Security Logs', icon: Shield },
 ];
 
 export function AdminSidebar() {
@@ -31,7 +33,6 @@ export function AdminSidebar() {
 
   return (
     <div className="flex h-full flex-col bg-forest-900 text-cream">
-      {/* Text-only wordmark — no image */}
       <div className="border-b border-forest-700/80 px-6 py-5">
         <Link to="/admin" className="block transition hover:opacity-90">
           <div className="flex flex-col leading-none">
@@ -114,12 +115,10 @@ export function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-charcoal text-cream">
-      {/* Desktop sidebar */}
       <aside className="fixed left-0 top-0 z-30 hidden h-screen w-64 border-r border-forest-700/80 bg-forest-900 shadow-xl lg:block">
         <AdminSidebar />
       </aside>
 
-      {/* Mobile sidebar drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -144,7 +143,6 @@ export function AdminLayout({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       <div className="lg:pl-64">
-        {/* Mobile top bar — image Logo stays here since there's no sidebar on mobile */}
         <div className="sticky top-0 z-20 flex h-14 items-center justify-between border-b border-forest-700/80 bg-forest-900/95 px-4 backdrop-blur-md lg:hidden">
           <Logo size="sm" to="/admin" />
           <button

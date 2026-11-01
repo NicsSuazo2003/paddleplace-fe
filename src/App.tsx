@@ -7,15 +7,17 @@ import { Checkout } from '@/pages/Checkout';
 import { Success } from '@/pages/Success';
 import { Track } from '@/pages/Track';
 import { Login } from '@/pages/Login';
+import { ResetPassword } from '@/pages/ResetPassword';
 import { Dashboard } from '@/pages/admin/Dashboard';
 import { Bookings } from '@/pages/admin/Bookings';
 import { Courts } from '@/pages/admin/Courts';
 import { Pricing } from '@/pages/admin/Pricing';
 import { Settings } from '@/pages/admin/Settings';
 import { OpenPlayManagement } from '@/pages/admin/OpenPlayManagement';
+import { SecurityLogs } from '@/pages/admin/SecurityLogs';
 import { StaffBookings } from '@/pages/staff/StaffBookings';
 import { OpenPlay } from '@/pages/OpenPlay';
-import { AdminLayout } from '@/components/layout/AdminLayout'; // ✅ ADD THIS
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { useAuthStore } from '@/stores/authStore';
 import { IntroSplash } from '@/components/IntroSplash';
 import { isInAppBrowser } from '@/utils/browser';
@@ -66,22 +68,24 @@ export default function App() {
         <Route path="/track" element={<Track />} />
         <Route path="/open-play" element={<OpenPlay />} />
         <Route path="/login" element={<Login />} />
-        
+        <Route path="/reset-password" element={<ResetPassword />} />
+
         {/* Admin Routes */}
         <Route path="/admin" element={<Dashboard />} />
         <Route path="/admin/bookings" element={<Bookings />} />
         <Route path="/admin/courts" element={<Courts />} />
         <Route path="/admin/pricing" element={<Pricing />} />
-        <Route 
-          path="/admin/open-play" 
+        <Route
+          path="/admin/open-play"
           element={
             <AdminLayout>
               <OpenPlayManagement />
             </AdminLayout>
-          } 
+          }
         />
         <Route path="/admin/settings" element={<Settings />} />
-        
+        <Route path="/admin/security-logs" element={<SecurityLogs />} />
+
         {/* Staff Routes */}
         <Route path="/staff" element={<Navigate to="/staff/bookings" replace />} />
         <Route path="/staff/bookings" element={<StaffBookings />} />

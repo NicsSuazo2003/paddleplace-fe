@@ -1,3 +1,4 @@
+// src/pages/Login.tsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -5,6 +6,7 @@ import { Mail, Lock, AlertCircle, ArrowLeft, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/stores/authStore';
+import { ApiError } from '@/services/api';
 import { COURT_IMAGES } from '@/utils/constants';
 
 export function Login() {
@@ -15,10 +17,14 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/admin';
+  // Prefer `next` query param from api.ts redirect, fall back to route state, then /admin
+  const params = new URLSearchParams(location.search);
+  const from =
+    params.get('next') ||
+    (location.state as { from?: { pathname: string } })?.from?.pathname ||
+    '/admin';
 
   useEffect(() => {
-    // Wait for init() to resolve before deciding whether to redirect
     if (!initializing && isAuthenticated) {
       navigate(from, { replace: true });
     }
@@ -34,14 +40,20 @@ export function Login() {
     try {
       await login(email, password);
       navigate(from, { replace: true });
-    } catch {
-      setFormError('Invalid email or password');
+    } catch (err) {
+      // ✅ Surface backend message, not the generic "Invalid email or password"
+      if (err instanceof ApiError) {
+        setFormError(err.userMessage);
+      } else if (err instanceof Error) {
+        setFormError(err.message || 'Sign in failed. Please try again.');
+      } else {
+        setFormError('Sign in failed. Please try again.');
+      }
     }
   };
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0A2629]">
-      {/* Background Image & Tone Overlays */}
       <div className="absolute inset-0">
         <img
           src={COURT_IMAGES.hero}
@@ -53,7 +65,6 @@ export function Login() {
       </div>
 
       <div className="relative z-10 w-full max-w-md px-4">
-        {/* Back Link */}
         <Link
           to="/"
           className="mb-6 inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/70 hover:text-[#B6DAC8] transition"
@@ -62,15 +73,17 @@ export function Login() {
           Back to Home
         </Link>
 
-        {/* Dark Glassmorphism Container */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-3xl border border-white/10 bg-[#0C3236]/80 p-7 shadow-2xl backdrop-blur-xl sm:p-9"
         >
-          {/* Brand Header */}
           <div className="mb-7 text-center">
-            <Link to="/" aria-label="Paddle Place Home" className="inline-flex flex-col items-center leading-none transition hover:opacity-90">
+            <Link
+              to="/"
+              aria-label="Paddle Place Home"
+              className="inline-flex flex-col items-center leading-none transition hover:opacity-90"
+            >
               <span className="font-display text-3xl font-black tracking-tight text-white">
                 Paddle <span className="text-[#B6DAC8]">Place</span>
               </span>
@@ -123,6 +136,9 @@ export function Login() {
             >
               Sign In
             </Button>
+
+            {/* Forgot-password link intentionally omitted — no /forgot-password page yet.
+                Add when ForgotPassword.tsx ships (Phase 4 follow-up). */}
           </form>
         </motion.div>
       </div>
